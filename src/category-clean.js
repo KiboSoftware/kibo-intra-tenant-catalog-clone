@@ -9,7 +9,7 @@ const agent = proxy ? new HttpProxyAgent(proxy) : null;
 
 const headers = {
   'Content-Type': 'application/json',
-  'accept': 'application/json',
+  accept: 'application/json',
 };
 
 const apiRoot = process.env.API_URL;
@@ -22,22 +22,28 @@ const postOAuth = async () => {
     client_id: clientId,
     client_secret: clientSecret,
   };
-  const response = await fetch(`${apiRoot}/platform/applications/authtickets/oauth`, {
-    method: 'POST',
-    headers,
-    agent,
-    body: JSON.stringify(data)
-  });
+  const response = await fetch(
+    `${apiRoot}/platform/applications/authtickets/oauth`,
+    {
+      method: 'POST',
+      headers,
+      agent,
+      body: JSON.stringify(data),
+    },
+  );
   const result = await response.json();
   return result.access_token;
 };
 
 const getCategories = async (startIndex, pageSize) => {
-  const response = await fetch(`${apiRoot}/commerce/catalog/admin/categories?startIndex=${startIndex}&pageSize=${pageSize}`, {
-    method: 'GET',
-    headers,
-    agent
-  });
+  const response = await fetch(
+    `${apiRoot}/commerce/catalog/admin/categories?startIndex=${startIndex}&pageSize=${pageSize}`,
+    {
+      method: 'GET',
+      headers,
+      agent,
+    },
+  );
   const data = await response.json();
   return data;
 };
@@ -46,21 +52,26 @@ const getTenant = async (tenantId) => {
   const response = await fetch(`${apiRoot}/platform/tenants/${tenantId}`, {
     method: 'GET',
     headers,
-    agent
+    agent,
   });
   const data = await response.json();
   return data;
 };
 
 const saveCategory = async (categoryId, category) => {
-  const response = await fetch(`${apiRoot}/commerce/catalog/admin/categories/${categoryId}`, {
-    method: 'PUT',
-    headers,
-    body: JSON.stringify(category),
-    agent
-  });
+  const response = await fetch(
+    `${apiRoot}/commerce/catalog/admin/categories/${categoryId}`,
+    {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(category),
+      agent,
+    },
+  );
   if (response.status !== 200) {
-    console.log(`Failed to save category ${categoryId} - ${response.statusText}`);
+    console.log(
+      `Failed to save category ${categoryId} - ${response.statusText}`,
+    );
   }
   const result = await response.json();
   return result;
@@ -68,7 +79,10 @@ const saveCategory = async (categoryId, category) => {
 
 const cleanAndSaveCategories = async (categories) => {
   for (const category of categories) {
-    if (category.categoryCode.startsWith('KW-EN-') || category.categoryCode.startsWith('KW-AR-')) {
+    if (
+      category.categoryCode.startsWith('KW-EN-') ||
+      category.categoryCode.startsWith('KW-AR-')
+    ) {
       category.categoryCode = category.categoryCode.substring(6);
       await saveCategory(category.id, category);
     }
@@ -76,7 +90,7 @@ const cleanAndSaveCategories = async (categories) => {
 };
 
 const getUniqueCatalogIds = (tenant) => {
-  const catalogIds = tenant.sites.map(site => site.catalogId);
+  const catalogIds = tenant.sites.map((site) => site.catalogId);
   const uniqueCatalogIds = [...new Set(catalogIds)];
   return uniqueCatalogIds;
 };

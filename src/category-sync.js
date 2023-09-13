@@ -9,7 +9,7 @@ const agent = proxy ? new HttpProxyAgent(proxy) : null;
 
 const headers = {
   'Content-Type': 'application/json',
-  'accept': 'application/json',
+  accept: 'application/json',
 };
 
 const apiRoot = process.env.API_URL;
@@ -23,22 +23,28 @@ const postOAuth = async () => {
     client_id: clientId,
     client_secret: clientSecret,
   };
-  const response = await fetch(`${apiRoot}/platform/applications/authtickets/oauth`, {
-    method: 'POST',
-    headers,
-    agent,
-    body: JSON.stringify(data)
-  });
+  const response = await fetch(
+    `${apiRoot}/platform/applications/authtickets/oauth`,
+    {
+      method: 'POST',
+      headers,
+      agent,
+      body: JSON.stringify(data),
+    },
+  );
   const result = await response.json();
   return result.access_token;
 };
 
 const getCategories = async (startIndex, pageSize) => {
-  const response = await fetch(`${apiRoot}/commerce/catalog/admin/categories?startIndex=${startIndex}&pageSize=${pageSize}`, {
-    method: 'GET',
-    headers,
-    agent
-  });
+  const response = await fetch(
+    `${apiRoot}/commerce/catalog/admin/categories?startIndex=${startIndex}&pageSize=${pageSize}`,
+    {
+      method: 'GET',
+      headers,
+      agent,
+    },
+  );
   const data = await response.json();
   return data;
 };
@@ -56,61 +62,78 @@ const getAllCategories = async () => {
   }
   sortCategories(categories);
   return categories;
-}
+};
 
 const getTenant = async (tenantId) => {
   const response = await fetch(`${apiRoot}/platform/tenants/${tenantId}`, {
     method: 'GET',
     headers,
-    agent
+    agent,
   });
   const data = await response.json();
   return data;
 };
 
 const saveCategory = async (categoryId, category) => {
-  const response = await fetch(`${apiRoot}/commerce/catalog/admin/categories/${categoryId}`, {
-    method: 'PUT',
-    headers,
-    body: JSON.stringify(category),
-    agent
-  });
+  const response = await fetch(
+    `${apiRoot}/commerce/catalog/admin/categories/${categoryId}`,
+    {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(category),
+      agent,
+    },
+  );
   if (response.status !== 200) {
-    console.log(`Failed to save category ${categoryId} - ${response.statusText}`);
+    console.log(
+      `Failed to save category ${categoryId} - ${response.statusText}`,
+    );
   }
   const result = await response.json();
   return result;
 };
 
 const deleteCategory = async (categoryId) => {
-  const response = await fetch(`${apiRoot}/commerce/catalog/admin/categories/${categoryId}`, {
-    method: 'DELETE',
-    headers,
-    agent
-  });
+  const response = await fetch(
+    `${apiRoot}/commerce/catalog/admin/categories/${categoryId}`,
+    {
+      method: 'DELETE',
+      headers,
+      agent,
+    },
+  );
   if (response.status !== 200) {
-    console.log(`Failed to save category ${categoryId} - ${response.statusText}`);
+    console.log(
+      `Failed to save category ${categoryId} - ${response.statusText}`,
+    );
   }
   return;
 };
 
-
 const createCategory = async (category) => {
-  const response = await fetch(`${apiRoot}/commerce/catalog/admin/categories/`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(category),
-    agent
-  });
+  const response = await fetch(
+    `${apiRoot}/commerce/catalog/admin/categories/`,
+    {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(category),
+      agent,
+    },
+  );
   if (response.status !== 201) {
-    console.log(`Failed to save category ${category.categoryCode} - ${response.statusText}`);
+    console.log(
+      `Failed to save category ${category.categoryCode} - ${response.statusText}`,
+    );
   }
   const result = await response.json();
   return result;
 };
 const cleanAndSaveCategories = async (categories) => {
   for (const category of categories) {
-    if (category.categoryCode.startsWith('KW-EN-') || category.categoryCode.startsWith('KW-AR-')) {
+    if (
+      category.categoryCode.startsWith('KW-EN-') ||
+      category.categoryCode.startsWith('KW-AR-')
+    ) {
       category.categoryCode = category.categoryCode.substring(6);
       await saveCategory(category.id, category);
     }
@@ -118,7 +141,7 @@ const cleanAndSaveCategories = async (categories) => {
 };
 
 const getUniqueCatalogIds = (tenant) => {
-  const catalogIds = tenant.sites.map(site => site.catalogId);
+  const catalogIds = tenant.sites.map((site) => site.catalogId);
   const uniqueCatalogIds = [...new Set(catalogIds)];
   return uniqueCatalogIds;
 };
@@ -159,39 +182,50 @@ const categorySync = async () => {
   headers.Authorization = `Bearer ${await postOAuth()}`;
 
   for (const catalogPair of catalogPairs) {
-
     headers['x-vol-catalog'] = catalogPair.source;
     const sourceCategories = await getAllCategories();
     headers['x-vol-catalog'] = catalogPair.destination;
     const destinationCategories = await getAllCategories();
 
-   
+    const sourceCategoriesDictionary = sourceCategories.reduce(
+      (acc, category) => {
+        acc[category.categoryCode] = category;
+        return acc;
+      },
+      {},
+    );
 
-    const sourceCategoriesDictionary = sourceCategories.reduce((acc, category) => {
-      acc[category.categoryCode] = category;
-      return acc;
-    }, {});
+    const destinationCategoriesDictionary = destinationCategories.reduce(
+      (acc, category) => {
+        acc[category.categoryCode] = category;
+        return acc;
+      },
+      {},
+    );
 
-    const destinationCategoriesDictionary = destinationCategories.reduce((acc, category) => {
-      acc[category.categoryCode] = category;
-      return acc;
-    }, {});
+    const sourceCategoryCodes = sourceCategories.map(
+      (category) => category.categoryCode,
+    );
+    const destinationCategoryCodes = destinationCategories.map(
+      (category) => category.categoryCode,
+    );
 
-    
-    const sourceCategoryCodes = sourceCategories.map(category => category.categoryCode);
-    const destinationCategoryCodes = destinationCategories.map(category => category.categoryCode);
+    const missingCategoryCodes = sourceCategoryCodes.filter(
+      (categoryCode) => !destinationCategoryCodes.includes(categoryCode),
+    );
 
-    
-    const missingCategoryCodes = sourceCategoryCodes.filter(categoryCode => !destinationCategoryCodes.includes(categoryCode));
-    
     for (const missingCategoryCode of missingCategoryCodes) {
-      const newCategory = Object.assign({}, sourceCategoriesDictionary[ missingCategoryCode])
+      const newCategory = Object.assign(
+        {},
+        sourceCategoriesDictionary[missingCategoryCode],
+      );
 
       delete newCategory.id;
-      newCategory.parentCategoryId = destinationCategoriesDictionary[newCategory.parentCategoryCode]?.id;      
-      destinationCategoriesDictionary[newCategory.categoryCode] = await createCategory(newCategory);
+      newCategory.parentCategoryId =
+        destinationCategoriesDictionary[newCategory.parentCategoryCode]?.id;
+      destinationCategoriesDictionary[newCategory.categoryCode] =
+        await createCategory(newCategory);
     }
-    
   }
 };
 

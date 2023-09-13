@@ -7,7 +7,7 @@ const proxy = process.env.HTTP_PROXY;
 const agent = proxy ? new HttpProxyAgent(proxy) : null;
 const headers = {
   'Content-Type': 'application/json',
-  'accept': 'application/json',
+  accept: 'application/json',
 };
 let apiRoot = process.env.API_URL;
 const clientId = process.env.CLIENT_ID;
@@ -18,12 +18,16 @@ const primeCatalog = parseInt(process.env.PRIME_CATALOG);
 const catalogPairs = JSON.parse(process.env.CATALOG_PAIRS);
 const sitePairs = JSON.parse(process.env.SITE_PAIRS);
 
-
-
-
 class CatalogClone {
-  
-  constructor(apiRoot, clientId, clientSecret, masterCatalog, primeCatalog, catalogPairs, sitePairs) {
+  constructor(
+    apiRoot,
+    clientId,
+    clientSecret,
+    masterCatalog,
+    primeCatalog,
+    catalogPairs,
+    sitePairs,
+  ) {
     this.apiRoot = apiRoot;
     this.clientId = clientId;
     this.clientSecret = clientSecret;
@@ -34,15 +38,14 @@ class CatalogClone {
     this.state = { tenants: {} };
     this.headers = {
       'Content-Type': 'application/json',
-      'accept': 'application/json',
+      accept: 'application/json',
     };
     this.proxy = process.env.HTTP_PROXY;
     this.agent = this.proxy ? new HttpProxyAgent(this.proxy) : null;
   }
 }
 
-
-const state = { tenants: {} }
+const state = { tenants: {} };
 const postOAuth = async () => {
   const ticket = state.ticket;
   if (ticket && ticket.expiresAt > Date.now()) {
@@ -52,32 +55,41 @@ const postOAuth = async () => {
     client_id: clientId,
     client_secret: clientSecret,
   };
-  const response = await fetch(`${apiRoot}/platform/applications/authtickets/oauth`, {
-    method: 'POST',
-    headers,
-    agent,
-    body: JSON.stringify(data)
-  });
+  const response = await fetch(
+    `${apiRoot}/platform/applications/authtickets/oauth`,
+    {
+      method: 'POST',
+      headers,
+      agent,
+      body: JSON.stringify(data),
+    },
+  );
   const result = await response.json();
   state.ticket = result;
   state.ticket.expiresAt = Date.now() + result.expires_in * 1000;
   return result.access_token;
 };
 const getCategories = async (startIndex, pageSize) => {
-  const response = await fetch(`${apiRoot}/commerce/catalog/admin/categories?startIndex=${startIndex}&pageSize=${pageSize}`, {
-    method: 'GET',
-    headers,
-    agent
-  });
+  const response = await fetch(
+    `${apiRoot}/commerce/catalog/admin/categories?startIndex=${startIndex}&pageSize=${pageSize}`,
+    {
+      method: 'GET',
+      headers,
+      agent,
+    },
+  );
   const data = await response.json();
   return data;
 };
 const getProducts = async (startIndex, pageSize) => {
-  const response = await fetch(`${apiRoot}/commerce/catalog/admin/products?startIndex=${startIndex}&pageSize=${pageSize}`, {
-    method: 'GET',
-    headers,
-    agent
-  });
+  const response = await fetch(
+    `${apiRoot}/commerce/catalog/admin/products?startIndex=${startIndex}&pageSize=${pageSize}`,
+    {
+      method: 'GET',
+      headers,
+      agent,
+    },
+  );
   const data = await response.json();
   return data;
 };
@@ -97,12 +109,11 @@ const getAllCategories = async () => {
     pageCount = data.pageCount;
     progressBar.update(startIndex + data.items?.length);
     startIndex += pageSize;
-
   }
   sortCategories(categories);
   progressBar.stop();
   return categories;
-}
+};
 const getTenant = async (tenantId) => {
   let tenant = state.tenants[tenantId];
   if (tenant) {
@@ -111,7 +122,7 @@ const getTenant = async (tenantId) => {
   const response = await fetch(`${apiRoot}/platform/tenants/${tenantId}`, {
     method: 'GET',
     headers,
-    agent
+    agent,
   });
   state.tenants[tenantId] = await response.json();
   return state.tenants[tenantId];
@@ -124,64 +135,77 @@ const generalSettingRoutes = {
   inventory: '/commerce/settings/inventory/inventorySettings',
   return: '/commerce/settings/return/returnsettings',
   shipping: '/commerce/settings/shipping',
-  subscription: '/commerce/settings/subscription/subscriptionsettings'
-}
+  subscription: '/commerce/settings/subscription/subscriptionsettings',
+};
 
 const getSetting = async (settingName) => {
   let route = generalSettingRoutes[settingName];
   const response = await fetch(`${apiRoot}${route}`, {
     method: 'GET',
     headers,
-    agent
+    agent,
   });
   if (response.status !== 200) {
-    console.log(`Failed to get ${settingName} - site:${headers['x-vol-site']} -  ${response.statusText}`);
+    console.log(
+      `Failed to get ${settingName} - site:${headers['x-vol-site']} -  ${response.statusText}`,
+    );
   } else {
     return await response.json();
   }
-}
+};
 const saveSetting = async (settingName, setting) => {
   let route = generalSettingRoutes[settingName];
   const response = await fetch(`${apiRoot}${route}`, {
     method: 'PUT',
     headers,
     body: JSON.stringify(setting),
-    agent
+    agent,
   });
   if (response.status !== 200) {
-    console.log(`Failed to save ${settingName} - site:${headers['x-vol-site']}  - ${response.statusText}`);
+    console.log(
+      `Failed to save ${settingName} - site:${headers['x-vol-site']}  - ${response.statusText}`,
+    );
   } else {
     return await response.json();
   }
-}
-
+};
 
 const saveCategory = async (categoryId, category) => {
-  const response = await fetch(`${apiRoot}/commerce/catalog/admin/categories/${categoryId}`, {
-    method: 'PUT',
-    headers,
-    body: JSON.stringify(category),
-    agent
-  });
+  const response = await fetch(
+    `${apiRoot}/commerce/catalog/admin/categories/${categoryId}`,
+    {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(category),
+      agent,
+    },
+  );
   if (response.status !== 200) {
-    console.log(`Failed to save category ${categoryId} - ${response.statusText}`);
+    console.log(
+      `Failed to save category ${categoryId} - ${response.statusText}`,
+    );
   }
   const result = await response.json();
   return result;
 };
 const saveProduct = async (product) => {
-  const response = await fetch(`${apiRoot}/commerce/catalog/admin/products/${product.productCode}?sort=productSequence asc`, {
-    method: 'PUT',
-    headers,
-    body: JSON.stringify(product),
-    agent
-  });
+  const response = await fetch(
+    `${apiRoot}/commerce/catalog/admin/products/${product.productCode}?sort=productSequence asc`,
+    {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(product),
+      agent,
+    },
+  );
   if (response.status !== 200) {
     if (response.headers.get('Content-Type').indexOf('json') > -1) {
       const result = await response.json();
       console.log(result);
     }
-    console.log(`Failed to save Product ${product.productCode} - ${response.statusText}`);
+    console.log(
+      `Failed to save Product ${product.productCode} - ${response.statusText}`,
+    );
     return;
   }
 
@@ -189,190 +213,233 @@ const saveProduct = async (product) => {
   return result;
 };
 const deleteCategory = async (categoryId) => {
-  const response = await fetch(`${apiRoot}/commerce/catalog/admin/categories/${categoryId}`, {
-    method: 'DELETE',
-    headers,
-    agent
-  });
+  const response = await fetch(
+    `${apiRoot}/commerce/catalog/admin/categories/${categoryId}`,
+    {
+      method: 'DELETE',
+      headers,
+      agent,
+    },
+  );
   if (response.status !== 200) {
-    console.log(`Failed to save category ${categoryId} - ${response.statusText}`);
+    console.log(
+      `Failed to save category ${categoryId} - ${response.statusText}`,
+    );
   }
   return;
 };
 const createCategory = async (category) => {
-  const response = await fetch(`${apiRoot}/commerce/catalog/admin/categories/`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(category),
-    agent
-  });
+  const response = await fetch(
+    `${apiRoot}/commerce/catalog/admin/categories/`,
+    {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(category),
+      agent,
+    },
+  );
   if (response.status !== 201) {
-    console.log(`Failed to save category ${category.categoryCode} - ${response.statusText}`);
+    console.log(
+      `Failed to save category ${category.categoryCode} - ${response.statusText}`,
+    );
   }
   const result = await response.json();
   return result;
 };
 
-
-
 const getEntityLists = async () => {
   const response = await fetch(`${apiRoot}/platform/entitylists?pagesize=200`, {
     method: 'GET',
     headers,
-    agent
+    agent,
   });
   const result = await response.json();
-  return result;  
-}
+  return result;
+};
 const getEntities = async (entityListId, startIndex) => {
   startIndex = startIndex || 0;
-  const response = await fetch(`${apiRoot}/platform/entitylists/${entityListId}/entities?pagesize=200&startIndex=${startIndex}`, {
-    method: 'GET',
-    headers,
-    agent
-  });
+  const response = await fetch(
+    `${apiRoot}/platform/entitylists/${entityListId}/entities?pagesize=200&startIndex=${startIndex}`,
+    {
+      method: 'GET',
+      headers,
+      agent,
+    },
+  );
   const result = await response.json();
-  return result;  
-}
+  return result;
+};
 
 const saveEntity = async (entityListId, entity) => {
-  let response = await fetch(`${apiRoot}/platform/entitylists/${entityListId}/entities/${entity.id}`, {
-    method: 'PUT',
-    headers,
-    body: JSON.stringify(entity),
-    agent
-  });
-  if( response.status > 299) {
-    response = await fetch(`${apiRoot}/platform/entitylists/${entityListId}/entities`, {
-      method: 'POST',
+  let response = await fetch(
+    `${apiRoot}/platform/entitylists/${entityListId}/entities/${entity.id}`,
+    {
+      method: 'PUT',
       headers,
       body: JSON.stringify(entity),
-      agent
-    });
+      agent,
+    },
+  );
+  if (response.status > 299) {
+    response = await fetch(
+      `${apiRoot}/platform/entitylists/${entityListId}/entities`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(entity),
+        agent,
+      },
+    );
   }
   if (response.status !== 200) {
     console.log(`Failed to save entity ${entity.id} - ${response.statusText}`);
   }
   const result = await response.json();
   return result;
-}
-
-
-
+};
 
 const getSearchRedirects = async () => {
   //todo: get all pages
-  const response = await fetch(`${apiRoot}/commerce/catalog/admin/search/redirect?pagesize=200`, {
-    method: 'GET',
-    headers,
-    agent
-  });
+  const response = await fetch(
+    `${apiRoot}/commerce/catalog/admin/search/redirect?pagesize=200`,
+    {
+      method: 'GET',
+      headers,
+      agent,
+    },
+  );
   const result = await response.json();
   return result;
 };
 
 const saveSearchRedirects = async (item) => {
-  let response = await fetch(`${apiRoot}/commerce/catalog/admin/search/redirect/${item.redirectId}`, {
-    method: 'PUT',
-    headers,
-    body: JSON.stringify(item),
-    agent
-  });
-  if (response.status > 299) {
-
-    response = await fetch(`${apiRoot}/commerce/catalog/admin/search/redirect`, {
-      method: 'POST',
+  let response = await fetch(
+    `${apiRoot}/commerce/catalog/admin/search/redirect/${item.redirectId}`,
+    {
+      method: 'PUT',
       headers,
       body: JSON.stringify(item),
-      agent
-    });
-
+      agent,
+    },
+  );
+  if (response.status > 299) {
+    response = await fetch(
+      `${apiRoot}/commerce/catalog/admin/search/redirect`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(item),
+        agent,
+      },
+    );
   }
   if (response.status > 299) {
-    console.log(`Failed to save SearchMerchandizingRules ${item.code} - ${response.statusText}`);
+    console.log(
+      `Failed to save SearchMerchandizingRules ${item.code} - ${response.statusText}`,
+    );
   }
   const result = await response.json();
   return result;
-}
-
-
+};
 
 const getSearchMerchandizingRules = async () => {
   //todo: get all pages
-  const response = await fetch(`${apiRoot}/commerce/catalog/admin/searchmerchandizingrules?pagesize=200`, {
-    method: 'GET',
-    headers,
-    agent
-  });
+  const response = await fetch(
+    `${apiRoot}/commerce/catalog/admin/searchmerchandizingrules?pagesize=200`,
+    {
+      method: 'GET',
+      headers,
+      agent,
+    },
+  );
   const result = await response.json();
   return result;
 };
 
 const saveSearchMerchandizingRules = async (merchRule) => {
-  let response = await fetch(`${apiRoot}/commerce/catalog/admin/searchmerchandizingrules/${merchRule.code}`, {
-    method: 'PUT',
-    headers,
-    body: JSON.stringify(merchRule),
-    agent
-  });
-  if (response.status > 299) {
-
-    response = await fetch(`${apiRoot}/commerce/catalog/admin/searchmerchandizingrules`, {
-      method: 'POST',
+  let response = await fetch(
+    `${apiRoot}/commerce/catalog/admin/searchmerchandizingrules/${merchRule.code}`,
+    {
+      method: 'PUT',
       headers,
       body: JSON.stringify(merchRule),
-      agent
-    });
-
+      agent,
+    },
+  );
+  if (response.status > 299) {
+    response = await fetch(
+      `${apiRoot}/commerce/catalog/admin/searchmerchandizingrules`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(merchRule),
+        agent,
+      },
+    );
   }
   if (response.status > 299) {
-    console.log(`Failed to save SearchMerchandizingRules ${merchRule.code} - ${response.statusText}`);
+    console.log(
+      `Failed to save SearchMerchandizingRules ${merchRule.code} - ${response.statusText}`,
+    );
   }
   const result = await response.json();
   return result;
-}
-
+};
 
 const getSearchSettings = async () => {
-  const response = await fetch(`${apiRoot}/commerce/catalog/admin/search/settings`, {
-    method: 'GET',
-    headers,
-    agent
-  });
+  const response = await fetch(
+    `${apiRoot}/commerce/catalog/admin/search/settings`,
+    {
+      method: 'GET',
+      headers,
+      agent,
+    },
+  );
   const result = await response.json();
   return result;
 };
 const saveSearchSetting = async (searchSetting) => {
-  let response = await fetch(`${apiRoot}/commerce/catalog/admin/search/settings/${searchSetting.settingsName}`, {
-    method: 'PUT',
-    headers,
-    body: JSON.stringify(searchSetting),
-    agent
-  });
-  if (response.status > 299) {
-    response = await fetch(`${apiRoot}/commerce/catalog/admin/search/settings`, {
-      method: 'POST',
+  let response = await fetch(
+    `${apiRoot}/commerce/catalog/admin/search/settings/${searchSetting.settingsName}`,
+    {
+      method: 'PUT',
       headers,
       body: JSON.stringify(searchSetting),
-      agent
-    });
+      agent,
+    },
+  );
+  if (response.status > 299) {
+    response = await fetch(
+      `${apiRoot}/commerce/catalog/admin/search/settings`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(searchSetting),
+        agent,
+      },
+    );
   }
   if (response.status > 299) {
-    console.log(`Failed to save searchSetting ${searchSetting.settingsName} - ${response.statusText}`);
+    console.log(
+      `Failed to save searchSetting ${searchSetting.settingsName} - ${response.statusText}`,
+    );
   }
   const result = await response.json();
   return result;
-}
+};
 const cleanAndSaveCategories = async (categories) => {
   for (const category of categories) {
-    if (category.categoryCode.startsWith('KW-EN-') || category.categoryCode.startsWith('KW-AR-')) {
+    if (
+      category.categoryCode.startsWith('KW-EN-') ||
+      category.categoryCode.startsWith('KW-AR-')
+    ) {
       category.categoryCode = category.categoryCode.substring(6);
       await saveCategory(category.id, category);
     }
   }
 };
 const getUniqueCatalogIds = (tenant) => {
-  const catalogIds = tenant.sites.map(site => site.catalogId);
+  const catalogIds = tenant.sites.map((site) => site.catalogId);
   const uniqueCatalogIds = [...new Set(catalogIds)];
   return uniqueCatalogIds;
 };
@@ -384,7 +451,7 @@ const getCatalogMap = (tenant) => {
     });
   });
   return catalogMap;
-}
+};
 const cleanCategories = async () => {
   headers.Authorization = `Bearer ${await postOAuth()}`;
   const tenant = await getTenant(tenantId);
@@ -418,50 +485,71 @@ function sortCategories(categories) {
   return categories;
 }
 const sortCategoryById = (categories, categoryId) => {
-  const matchingCategory = categories.find(cat => cat.categoryId === categoryId);
+  const matchingCategory = categories.find(
+    (cat) => cat.categoryId === categoryId,
+  );
   if (matchingCategory) {
     const index = categories.indexOf(matchingCategory);
     categories.splice(index, 1);
     categories.unshift(matchingCategory);
   }
   return categories;
-}
-const mapCategoryIds = (categoryMap, productInCatalogSource, productInCatalogsDestination) => {
+};
+const mapCategoryIds = (
+  categoryMap,
+  productInCatalogSource,
+  productInCatalogsDestination,
+) => {
   if (productInCatalogSource == productInCatalogsDestination) {
     return;
   }
   var sourceMap = categoryMap[productInCatalogSource.catalogId];
   var destinationMap = categoryMap[productInCatalogsDestination.catalogId];
-  productInCatalogsDestination.productCategories = productInCatalogSource.productCategories
-    ?.map(id => destinationMap.categoryCodes[sourceMap.ids[id.categoryId]?.categoryCode]?.id)
-    .filter(id => id !== null && id !== undefined)
-    .map(id => { return { categoryId: id } });
+  productInCatalogsDestination.productCategories =
+    productInCatalogSource.productCategories
+      ?.map(
+        (id) =>
+          destinationMap.categoryCodes[
+            sourceMap.ids[id.categoryId]?.categoryCode
+          ]?.id,
+      )
+      .filter((id) => id !== null && id !== undefined)
+      .map((id) => {
+        return { categoryId: id };
+      });
   if (!(productInCatalogsDestination.productCategories?.length > 0)) {
     delete productInCatalogsDestination.productCategories;
   }
   //todo validate primary category
-  const primaryCategoryId = destinationMap.categoryCodes[sourceMap.ids[productInCatalogSource.primaryProductCategory?.categoryId]?.categoryCode]?.id;
+  const primaryCategoryId =
+    destinationMap.categoryCodes[
+      sourceMap.ids[productInCatalogSource.primaryProductCategory?.categoryId]
+        ?.categoryCode
+    ]?.id;
   if (primaryCategoryId !== null && primaryCategoryId !== undefined) {
     productInCatalogsDestination.primaryProductCategory = {
-      catetoryId: primaryCategoryId
+      catetoryId: primaryCategoryId,
     };
-    productInCatalogsDestination.productCategories = sortCategoryById(productInCatalogsDestination.productCategories, primaryCategoryId);
+    productInCatalogsDestination.productCategories = sortCategoryById(
+      productInCatalogsDestination.productCategories,
+      primaryCategoryId,
+    );
   } else {
-    delete productInCatalogsDestination.primaryProductCategory
+    delete productInCatalogsDestination.primaryProductCategory;
   }
-}
+};
 const waitForPromises = async (promises, count) => {
   while (promises.size > count) {
     const finishedPromise = await Promise.race(promises);
   }
   return promises;
-}
+};
 
 const syncProductInCatalogs = async () => {
   headers.Authorization = `Bearer ${await postOAuth()}`;
 
   const progressBar = new SingleBar({}, Presets.shades_classic);
-  headers["x-vol-master-catalog"] = masterCatalog;
+  headers['x-vol-master-catalog'] = masterCatalog;
   let tenant = await getTenant(tenantId);
   let catalogMap = getCatalogMap(tenant);
   let categoryMap = await getCategoryMap();
@@ -470,7 +558,7 @@ const syncProductInCatalogs = async () => {
   const pageSize = 200;
   let work = new Set();
   console.log('Syncing products in Catalog');
-  delete headers['x-vol-catalog']
+  delete headers['x-vol-catalog'];
   while (startIndex < pageCount * pageSize) {
     headers.Authorization = `Bearer ${await postOAuth()}`;
     const data = await getProducts(startIndex, pageSize);
@@ -481,28 +569,36 @@ const syncProductInCatalogs = async () => {
       progressBar.increment();
       const beforeJson = JSON.stringify(product);
       let pic = product.productInCatalogs || [];
-      let prime = pic.find(p => p.catalogId === primeCatalog);
+      let prime = pic.find((p) => p.catalogId === primeCatalog);
       if (!prime) {
         console.log(`Product ${product.productCode} not in prime catalog`);
         continue;
       }
       for (const pair of catalogPairs) {
-        let source = pic.find(p => p.catalogId === pair.source);
-        let dest = pic.find(p => p.catalogId === pair.destination);
+        let source = pic.find((p) => p.catalogId === pair.source);
+        let dest = pic.find((p) => p.catalogId === pair.destination);
         if (!source) {
-          console.log(`Product ${product.productCode} not in source catalog ${pair.source}`);
+          console.log(
+            `Product ${product.productCode} not in source catalog ${pair.source}`,
+          );
           continue;
         }
         if (source.content && prime.content?.productImages) {
           source.content.productImages = prime.content?.productImages;
         }
         if (!dest) {
-          dest = JSON.parse(JSON.stringify(Object.assign({}, source, {
-            catalogId: pair.destination, price: {
-              isoCurrencyCode: catalogMap[pair.destination].defaultCurrencyCode,
-              price: 1
-            }
-          })));
+          dest = JSON.parse(
+            JSON.stringify(
+              Object.assign({}, source, {
+                catalogId: pair.destination,
+                price: {
+                  isoCurrencyCode:
+                    catalogMap[pair.destination].defaultCurrencyCode,
+                  price: 1,
+                },
+              }),
+            ),
+          );
 
           pic.push(dest);
         } else {
@@ -515,7 +611,7 @@ const syncProductInCatalogs = async () => {
       }
       if (productCompare(JSON.parse(beforeJson), product) != null) {
         let task = saveProduct(product);
-        task.finally(() => work.delete(task))
+        task.finally(() => work.delete(task));
         work.add(task);
         await waitForPromises(work, 4);
       } else {
@@ -528,15 +624,15 @@ const syncProductInCatalogs = async () => {
   await waitForPromises(work, 0);
   progressBar.stop();
   console.log('Done');
-}
+};
 function productCompare(product1, product2) {
   const sortProductInCatalogsByCatalogId = (product) => {
     product.productInCatalogs.sort((a, b) => {
       return a.catalogId - b.catalogId;
     });
-  }
-  sortProductInCatalogsByCatalogId(product1)
-  sortProductInCatalogsByCatalogId(product2)
+  };
+  sortProductInCatalogsByCatalogId(product1);
+  sortProductInCatalogsByCatalogId(product2);
 
   return deepCompare(product1, product2);
 }
@@ -579,7 +675,7 @@ const getCategoryMap = async () => {
   const catalogIds = getUniqueCatalogIds(tenant);
   for (const catalogId of catalogIds) {
     headers['x-vol-catalog'] = catalogId;
-    const map = categoryMap[catalogId] = { ids: {}, categoryCodes: {} };
+    const map = (categoryMap[catalogId] = { ids: {}, categoryCodes: {} });
     const categories = await getAllCategories();
     for (const category of categories) {
       map.ids[category.id] = category;
@@ -587,15 +683,16 @@ const getCategoryMap = async () => {
     }
   }
   return categoryMap;
-}
-
+};
 
 const syncMerchandisingSettings = async () => {
   headers.Authorization = `Bearer ${await postOAuth()}`;
   const tenant = await getTenant(tenantId);
   for (const sitePair of sitePairs) {
-    const sourceSite = tenant.sites.find(site => site.id === sitePair.source);
-    const destinationSite = tenant.sites.find(site => site.id === sitePair.destination);
+    const sourceSite = tenant.sites.find((site) => site.id === sitePair.source);
+    const destinationSite = tenant.sites.find(
+      (site) => site.id === sitePair.destination,
+    );
     headers['x-vol-catalog'] = sourceSite.catalogId;
     headers['x-vol-site'] = sourceSite.id;
     let rules = await getSearchMerchandizingRules();
@@ -604,21 +701,18 @@ const syncMerchandisingSettings = async () => {
       headers['x-vol-site'] = destinationSite.id;
       await saveSearchMerchandizingRules(rule);
     }
-
   }
   delete headers['x-vol-site'];
-}
-
-
-
-
+};
 
 const syncSerachRedirects = async () => {
   headers.Authorization = `Bearer ${await postOAuth()}`;
   const tenant = await getTenant(tenantId);
   for (const sitePair of sitePairs) {
-    const sourceSite = tenant.sites.find(site => site.id === sitePair.source);
-    const destinationSite = tenant.sites.find(site => site.id === sitePair.destination);
+    const sourceSite = tenant.sites.find((site) => site.id === sitePair.source);
+    const destinationSite = tenant.sites.find(
+      (site) => site.id === sitePair.destination,
+    );
     headers['x-vol-catalog'] = sourceSite.catalogId;
     headers['x-vol-site'] = sourceSite.id;
     let items = await getSearchRedirects();
@@ -627,12 +721,9 @@ const syncSerachRedirects = async () => {
       headers['x-vol-site'] = destinationSite.id;
       await saveSearchRedirects(item);
     }
-
   }
   delete headers['x-vol-site'];
-}
-
-
+};
 
 const syncSerachRedirects2 = async (siteMappings) => {
   headers.Authorization = `Bearer ${await postOAuth()}`;
@@ -656,12 +747,10 @@ const syncSerachRedirects2 = async (siteMappings) => {
       //let fixedRule = JSON.parse(txt);
       let ret = await saveSearchRedirects(item);
     }
-
   }
   apiRoot = backupApiRoot;
   delete headers['x-vol-site'];
-}
-
+};
 
 const syncMerchandisingSettings2 = async (siteMappings) => {
   headers.Authorization = `Bearer ${await postOAuth()}`;
@@ -685,27 +774,29 @@ const syncMerchandisingSettings2 = async (siteMappings) => {
       let fixedRule = JSON.parse(txt);
       let ret = await saveSearchMerchandizingRules(fixedRule);
     }
-
   }
   apiRoot = backupApiRoot;
   delete headers['x-vol-site'];
-}
-
-
-
+};
 
 const syncSearchSettings = async () => {
   headers.Authorization = `Bearer ${await postOAuth()}`;
   const tenant = await getTenant(tenantId);
   for (const sitePair of sitePairs) {
-    const sourceSite = tenant.sites.find(site => site.id === sitePair.source);
-    const destinationSite = tenant.sites.find(site => site.id === sitePair.destination);
+    const sourceSite = tenant.sites.find((site) => site.id === sitePair.source);
+    const destinationSite = tenant.sites.find(
+      (site) => site.id === sitePair.destination,
+    );
     headers['x-vol-catalog'] = sourceSite.catalogId;
     headers['x-vol-site'] = sourceSite.id;
     let sourceSearchSettings = await getSearchSettings();
-    let defaultSearchSetting = sourceSearchSettings.items.filter(setting => setting.isDefault === true)[0];
+    let defaultSearchSetting = sourceSearchSettings.items.filter(
+      (setting) => setting.isDefault === true,
+    )[0];
     if (!defaultSearchSetting) {
-      console.log(`No default search setting found for catalog ${catalogPair.source}`);
+      console.log(
+        `No default search setting found for catalog ${catalogPair.source}`,
+      );
       continue;
     }
     headers['x-vol-catalog'] = destinationSite.catalogId;
@@ -713,7 +804,7 @@ const syncSearchSettings = async () => {
     await saveSearchSetting(defaultSearchSetting);
   }
   delete headers['x-vol-site'];
-}
+};
 
 const syncEntities = async () => {
   headers.Authorization = `Bearer ${await postOAuth()}`;
@@ -721,39 +812,38 @@ const syncEntities = async () => {
   const lists = await getEntityLists();
 
   for (const sitePair of sitePairs) {
-    const sourceSite = tenant.sites.find(site => site.id === sitePair.source);
-    const destinationSite = tenant.sites.find(site => site.id === sitePair.destination);
-    
+    const sourceSite = tenant.sites.find((site) => site.id === sitePair.source);
+    const destinationSite = tenant.sites.find(
+      (site) => site.id === sitePair.destination,
+    );
 
     for (const list of lists.items) {
-      if ( list.contextLevel.toLowerCase() != 'catalog'){
+      if (list.contextLevel.toLowerCase() != 'catalog') {
         continue;
       }
       const listFqn = list.name + '@' + list.nameSpace;
       headers['x-vol-catalog'] = sourceSite.catalogId;
       headers['x-vol-site'] = sourceSite.id;
       var entities = await getEntities(listFqn);
-      for( const entity of entities.items){
+      for (const entity of entities.items) {
         headers['x-vol-catalog'] = destinationSite.catalogId;
         headers['x-vol-site'] = destinationSite.id;
-        
+
         await saveEntity(listFqn, entity);
       }
     }
-
-    
-
   }
   delete headers['x-vol-site'];
-}
-
+};
 
 const snycSiteSettings = async () => {
   headers.Authorization = `Bearer ${await postOAuth()}`;
   const tenant = await getTenant(tenantId);
   for (const sitePair of sitePairs) {
-    const sourceSite = tenant.sites.find(site => site.id === sitePair.source);
-    const destinationSite = tenant.sites.find(site => site.id === sitePair.destination);
+    const sourceSite = tenant.sites.find((site) => site.id === sitePair.source);
+    const destinationSite = tenant.sites.find(
+      (site) => site.id === sitePair.destination,
+    );
     for (const settingName in generalSettingRoutes) {
       headers['x-vol-catalog'] = sourceSite.catalogId;
       headers['x-vol-site'] = sourceSite.id;
@@ -766,7 +856,7 @@ const snycSiteSettings = async () => {
     }
   }
   delete headers['x-vol-site'];
-}
+};
 const categorySync = async () => {
   headers.Authorization = `Bearer ${await postOAuth()}`;
   for (const catalogPair of catalogPairs) {
@@ -774,33 +864,57 @@ const categorySync = async () => {
     const sourceCategories = await getAllCategories();
     headers['x-vol-catalog'] = catalogPair.destination;
     const destinationCategories = await getAllCategories();
-    const sourceCategoriesDictionary = sourceCategories.reduce((acc, category) => {
-      acc[category.categoryCode] = category;
-      return acc;
-    }, {});
-    const destinationCategoriesDictionary = destinationCategories.reduce((acc, category) => {
-      acc[category.categoryCode] = category;
-      return acc;
-    }, {});
-    const sourceCategoryCodes = sourceCategories.map(category => category.categoryCode);
-    const destinationCategoryCodes = destinationCategories.map(category => category.categoryCode);
-    const missingCategoryCodes = sourceCategoryCodes.filter(categoryCode => !destinationCategoryCodes.includes(categoryCode));
+    const sourceCategoriesDictionary = sourceCategories.reduce(
+      (acc, category) => {
+        acc[category.categoryCode] = category;
+        return acc;
+      },
+      {},
+    );
+    const destinationCategoriesDictionary = destinationCategories.reduce(
+      (acc, category) => {
+        acc[category.categoryCode] = category;
+        return acc;
+      },
+      {},
+    );
+    const sourceCategoryCodes = sourceCategories.map(
+      (category) => category.categoryCode,
+    );
+    const destinationCategoryCodes = destinationCategories.map(
+      (category) => category.categoryCode,
+    );
+    const missingCategoryCodes = sourceCategoryCodes.filter(
+      (categoryCode) => !destinationCategoryCodes.includes(categoryCode),
+    );
     for (const missingCategoryCode of missingCategoryCodes) {
-      const newCategory = Object.assign({}, sourceCategoriesDictionary[missingCategoryCode])
+      const newCategory = Object.assign(
+        {},
+        sourceCategoriesDictionary[missingCategoryCode],
+      );
       delete newCategory.id;
-      newCategory.parentCategoryId = destinationCategoriesDictionary[newCategory.parentCategoryCode]?.id;
-      destinationCategoriesDictionary[newCategory.categoryCode] = await createCategory(newCategory);
+      newCategory.parentCategoryId =
+        destinationCategoriesDictionary[newCategory.parentCategoryCode]?.id;
+      destinationCategoriesDictionary[newCategory.categoryCode] =
+        await createCategory(newCategory);
     }
     for (const sourceCategory of sourceCategories) {
-      const destinationCategory = destinationCategoriesDictionary[sourceCategory.categoryCode];
+      const destinationCategory =
+        destinationCategoriesDictionary[sourceCategory.categoryCode];
       if (!destinationCategory) {
         continue;
       }
       if (sourceCategory.categoryCode !== destinationCategory.categoryCode) {
         continue;
       }
-      if (sourceCategory.parentCategoryCode !== destinationCategory.parentCategoryCode) {
-        destinationCategory.parentCategoryId = destinationCategoriesDictionary[sourceCategory.parentCategoryCode]?.id;
+      if (
+        sourceCategory.parentCategoryCode !==
+        destinationCategory.parentCategoryCode
+      ) {
+        destinationCategory.parentCategoryId =
+          destinationCategoriesDictionary[
+            sourceCategory.parentCategoryCode
+          ]?.id;
         await saveCategory(destinationCategory.id, destinationCategory);
       }
     }
@@ -811,10 +925,8 @@ const categorySync = async () => {
 module.exports = {
   cleanCategories,
   categorySync,
-  syncSearchSettings
-}
-
-
+  syncSearchSettings,
+};
 
 async function main() {
   // await cleanCategories();
