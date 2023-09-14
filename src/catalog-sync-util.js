@@ -74,14 +74,17 @@ class CatalogCloneUtil {
     return data;
   }
 
-  async getProducts(startIndex, pageSize) {
-    const response = await fetch(
-      `${this.apiRoot}/commerce/catalog/admin/products?startIndex=${startIndex}&pageSize=${pageSize}`,
-      {
-        method: 'GET',
-        headers: this.headers,
-      },
-    );
+  async getProducts(startIndex, pageSize, lastSequence) {
+    let url = `${this.apiRoot}/commerce/catalog/admin/products`;
+    if (lastSequence) {
+      url = `${url}?pageSize=${pageSize}&sortby=productSequence asc&filter=productSequence gt ${lastSequence}`;
+    } else {
+      url = `${url}?startIndex=${startIndex}&pageSize=${pageSize}&sortby=productSequence asc`;
+    }
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.headers,
+    });
     const data = await response.json();
     return data;
   }
@@ -473,24 +476,53 @@ class CatalogCloneUtil {
     if (productInCatalogSource == productInCatalogsDestination) {
       return;
     }
+    if (
+      productInCatalogSource.primaryProductCategory &&
+      !(productInCatalogSource.productCategories || []).some(
+        (cat) =>
+          cat.categoryId ==
+          productInCatalogSource.primaryProductCategory.categoryId,
+      )
+    ) {
+      delete productInCatalogSource.primaryProductCategory;
+    }
+
     var sourceMap = categoryMap[productInCatalogSource.catalogId];
     var destinationMap = categoryMap[productInCatalogsDestination.catalogId];
-    productInCatalogsDestination.productCategories =
-      productInCatalogSource.productCategories
-        ?.map(
-          (id) =>
-            destinationMap.categoryCodes[
-              sourceMap.ids[id.categoryId]?.categoryCode
-            ]?.id,
-        )
-        .filter((id) => id !== null && id !== undefined)
-        .map((id) => {
-          return { categoryId: id };
-        });
+
+    let mappedCategories = productInCatalogSource.productCategories
+      ?.map(
+        (id) =>
+          destinationMap.categoryCodes[
+            sourceMap.ids[id.categoryId]?.categoryCode
+          ]?.id,
+      )
+      .filter((id) => id !== null && id !== undefined)
+      .map((id) => {
+        return { categoryId: id };
+      });
+
+    if (
+      (mappedCategories || []).length !=
+      (productInCatalogsDestination.productCategories || []).length
+    ) {
+      productInCatalogsDestination.productCategories = mappedCategories;
+    } else if (mappedCategories) {
+      if (
+        mappedCategories.some((mcat) => {
+          return !productInCatalogsDestination.productCategories.find(
+            (pcat) => pcat.categoryId == mcat.categoryId,
+          );
+        })
+      ) {
+        productInCatalogsDestination.productCategories = mappedCategories;
+      }
+    }
+
     if (!(productInCatalogsDestination.productCategories?.length > 0)) {
       delete productInCatalogsDestination.productCategories;
     }
-    //todo validate primary category
+
     const primaryCategoryId =
       destinationMap.categoryCodes[
         sourceMap.ids[productInCatalogSource.primaryProductCategory?.categoryId]
@@ -498,12 +530,17 @@ class CatalogCloneUtil {
       ]?.id;
     if (primaryCategoryId !== null && primaryCategoryId !== undefined) {
       productInCatalogsDestination.primaryProductCategory = {
-        catetoryId: primaryCategoryId,
+        categoryId: primaryCategoryId,
       };
-      productInCatalogsDestination.productCategories = this.sortCategoryById(
-        productInCatalogsDestination.productCategories,
-        primaryCategoryId,
-      );
+      if (
+        !productInCatalogsDestination.productCategories?.find(
+          (cat) => cat.categoryId == primaryCategoryId,
+        )
+      ) {
+        productInCatalogsDestination.productCategories.push(
+          productInCatalogsDestination.primaryProductCategory,
+        );
+      }
     } else {
       delete productInCatalogsDestination.primaryProductCategory;
     }
@@ -524,14 +561,17 @@ class CatalogCloneUtil {
     let catalogMap = this.getCatalogMap(tenant);
     let categoryMap = await this.getCategoryMap();
     let startIndex = 0;
-    let pageCount = 1;
+    //let pageCount = 1;
     const pageSize = 200;
     let work = new Set();
     console.log('Syncing products in Catalog');
     delete this.headers['x-vol-catalog'];
-    while (startIndex < pageCount * pageSize) {
+    let lastSequence = undefined;
+    let totalCount = 1;
+    while (totalCount > 0) {
       this.headers.Authorization = `Bearer ${await this.postOAuth()}`;
-      const data = await this.getProducts(startIndex, pageSize);
+      const data = await this.getProducts(startIndex, pageSize, lastSequence);
+      totalCount = data.totalCount;
       if (startIndex == 0) {
         progressBar.start(data.totalCount, 0);
       }
@@ -544,18 +584,26 @@ class CatalogCloneUtil {
           console.log(`Product ${product.productCode} not in prime catalog`);
           continue;
         }
+        // Loop through all the catalog pairs
         for (const pair of this.catalogPairs) {
+          // Find the source catalog
           let source = pic.find((p) => p.catalogId === pair.source);
+          // Find the destination catalog
           let dest = pic.find((p) => p.catalogId === pair.destination);
+          // If the source catalog is not found, skip to the next catalog pair
           if (!source) {
-            console.log(
-              `Product ${product.productCode} not in source catalog ${pair.source}`,
-            );
             continue;
           }
-          if (source.content && prime.content?.productImages) {
+          // If the source catalog has content and the destination catalog has no content, copy the source catalog content to the destination catalog
+          if (
+            source.content &&
+            prime.content?.productImages &&
+            prime.content.productImages.length >
+              source.content.productImages.length
+          ) {
             source.content.productImages = prime.content?.productImages;
           }
+          // If the destination catalog is not found, create a copy of the source catalog and assign it to the destination catalog
           if (!dest) {
             dest = JSON.parse(
               JSON.stringify(
@@ -572,23 +620,30 @@ class CatalogCloneUtil {
 
             pic.push(dest);
           } else {
-            if (dest.content && prime.content?.productImages) {
+            // If the destination catalog has content and the source catalog has more content, copy the source catalog content to the destination catalog
+            if (
+              dest.content &&
+              prime.content?.productImages &&
+              prime.content.productImages &&
+              prime.content.productImages.length >
+                dest.content.productImages.length
+            ) {
               dest.content.productImages = prime.content?.productImages;
             }
           }
+          // Map the category IDs from the prime catalog to the source and destination catalogs
           this.mapCategoryIds(categoryMap, prime, source);
           this.mapCategoryIds(categoryMap, prime, dest);
         }
+        lastSequence = product.productSequence;
         if (this.productCompare(JSON.parse(beforeJson), product) != null) {
           let task = this.saveProduct(product);
           task.finally(() => work.delete(task));
           work.add(task);
           await this.waitForPromises(work, 4);
-        } else {
-          //console.log(`Product ${product.productCode} not changed`);
         }
       }
-      pageCount = data.pageCount;
+      //pageCount = data.pageCount;
       startIndex += pageSize;
     }
     await this.waitForPromises(work, 0);
@@ -815,26 +870,45 @@ class CatalogCloneUtil {
   }
 
   async snycSiteSettings() {
+    // Set the authorization token header
     this.headers.Authorization = `Bearer ${await this.postOAuth()}`;
+
+    // Get the tenant details
     const tenant = await this.getTenant(this.tenantId);
+
+    // Loop through the site pairs
     for (const sitePair of this.sitePairs) {
+      // Get the source site
       const sourceSite = tenant.sites.find(
         (site) => site.id === sitePair.source,
       );
+
+      // Get the destination site
       const destinationSite = tenant.sites.find(
         (site) => site.id === sitePair.destination,
       );
+
+      // Loop through each of the setting names
       for (const settingName in this.generalSettingRoutes) {
+        // Set the source site headers
         this.headers['x-vol-catalog'] = sourceSite.catalogId;
         this.headers['x-vol-site'] = sourceSite.id;
+
+        // Get the setting from the source site
         let sourceSetting = await this.getSetting(settingName);
+
+        // If the setting exists, set the destination site headers
         if (sourceSetting) {
           this.headers['x-vol-catalog'] = destinationSite.catalogId;
           this.headers['x-vol-site'] = destinationSite.id;
+
+          // Save the source setting to the destination site
           await this.saveSetting(settingName, sourceSetting);
         }
       }
     }
+
+    // Remove the site header
     delete this.headers['x-vol-site'];
   }
   async categorySync() {
@@ -843,7 +917,10 @@ class CatalogCloneUtil {
       this.headers['x-vol-catalog'] = catalogPair.source;
       const sourceCategories = await this.getAllCategories();
       this.headers['x-vol-catalog'] = catalogPair.destination;
+      // Get all categories from source and destination
       const destinationCategories = await this.getAllCategories();
+
+      // Reduce source categories to a dictionary
       const sourceCategoriesDictionary = sourceCategories.reduce(
         (acc, category) => {
           acc[category.categoryCode] = category;
@@ -851,6 +928,8 @@ class CatalogCloneUtil {
         },
         {},
       );
+
+      // Reduce destination categories to a dictionary
       const destinationCategoriesDictionary = destinationCategories.reduce(
         (acc, category) => {
           acc[category.categoryCode] = category;
@@ -858,15 +937,22 @@ class CatalogCloneUtil {
         },
         {},
       );
+      // Get the category codes from the source and destination
+      // categories.
       const sourceCategoryCodes = sourceCategories.map(
         (category) => category.categoryCode,
       );
       const destinationCategoryCodes = destinationCategories.map(
         (category) => category.categoryCode,
       );
+
+      // Find the category codes that are missing in the destination
+      // categories.
       const missingCategoryCodes = sourceCategoryCodes.filter(
         (categoryCode) => !destinationCategoryCodes.includes(categoryCode),
       );
+
+      // Create the missing categories.
       for (const missingCategoryCode of missingCategoryCodes) {
         const newCategory = Object.assign(
           {},
@@ -878,15 +964,27 @@ class CatalogCloneUtil {
         destinationCategoriesDictionary[newCategory.categoryCode] =
           await this.createCategory(newCategory);
       }
+      // Loop through all source categories to find the corresponding destination category
       for (const sourceCategory of sourceCategories) {
+        // Search for the source category in the destination categories dictionary
+        // This dictionary contains all destination categories indexed by category code
         const destinationCategory =
           destinationCategoriesDictionary[sourceCategory.categoryCode];
+
+        // If the source category is not found in the destination categories dictionary,
+        // skip to the next source category
         if (!destinationCategory) {
           continue;
         }
+
+        // If the category code of the source category is different from the category code
+        // of the destination category, skip to the next source category
         if (sourceCategory.categoryCode !== destinationCategory.categoryCode) {
           continue;
         }
+
+        // If the parent category code of the source category is different from the parent category
+        // code of the destination category, update the parent category ID of the destination category
         if (
           sourceCategory.parentCategoryCode !==
           destinationCategory.parentCategoryCode
@@ -895,6 +993,8 @@ class CatalogCloneUtil {
             destinationCategoriesDictionary[
               sourceCategory.parentCategoryCode
             ]?.id;
+
+          // Save the changes to the destination category
           await this.saveCategory(destinationCategory.id, destinationCategory);
         }
       }
@@ -907,11 +1007,7 @@ export default CatalogCloneUtil;
 async function main() {
   dotenv.config();
 
-  const headers = {
-    'Content-Type': 'application/json',
-    accept: 'application/json',
-  };
-  let apiRoot = process.env.API_URL;
+  const apiRoot = process.env.API_URL;
   const clientId = process.env.CLIENT_ID;
   const clientSecret = process.env.CLIENT_SECRET;
   const tenantId = apiRoot.match(/https:\/\/t(\d+)/)[1];
@@ -928,8 +1024,7 @@ async function main() {
     catalogPairs,
     sitePairs,
     tenantId,
-    headers,
   );
-  await catalogCloneUtil.syncSearchSettings();
+  await catalogCloneUtil.syncProductInCatalogs();
 }
 main();
