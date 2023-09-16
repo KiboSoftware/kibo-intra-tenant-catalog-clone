@@ -1,6 +1,7 @@
 import fetch from 'node-fetch';
 import { SingleBar, Presets } from 'cli-progress';
-
+import fs from 'fs';
+import path from 'path';
 import dotenv from 'dotenv';
 
 class CatalogCloneUtil {
@@ -205,7 +206,7 @@ class CatalogCloneUtil {
     );
     if (response.status !== 200) {
       console.log(
-        `Failed to save category ${categoryId} - ${response.statusText}`,
+        `Failed to delete category ${categoryId} - ${response.statusText}`,
       );
     }
     return;
@@ -732,6 +733,150 @@ class CatalogCloneUtil {
     delete this.headers['x-vol-site'];
   }
 
+  async getFacets() {
+    //todo paging
+    const url = `${this.apiRoot}/commerce/catalog/admin/facets?pagesize=200`;
+    const response = await fetch(url, { headers: this.headers });
+    if (!response.ok) {
+      throw new Error(`Failed to get facets : ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  async saveFacet(facet) {
+    let response = null;
+    if (!facet.facetId) {
+      response = await fetch(`${this.apiRoot}/commerce/catalog/admin/facets`, {
+        method: 'POST',
+        headers: this.headers,
+        body: JSON.stringify(facet),
+      });
+    } else {
+      response = await fetch(
+        `${this.apiRoot}/commerce/catalog/admin/facets/${facet.facetId}`,
+        {
+          method: 'PUT',
+          headers: this.headers,
+          body: JSON.stringify(facet),
+        },
+      );
+    }
+
+    if (response.status > 299) {
+      let ret = await response.json();
+      console.log(`failed to save facet ${facet.facetId}`);
+    }
+  }
+
+  async getContents(filter, startIndex) {
+
+    const url = `${this.apiRoot}/content/documentlists/files@mozu/documents?filter=${filter}&pageSize=200&startIndex=${startIndex}`;
+    const response = await fetch(url, { method:'GET', headers: this.headers });
+    if (!response.ok) {
+      let foo = await response.json();
+      throw new Error(`Failed to get contents: ${response.statusText}`);
+    }
+    return await response.json();
+  }
+
+  async downloadSwatches() {
+    this.headers.Authorization = `Bearer ${await this.postOAuth()}`;
+    this.headers['x-vol-site'] = '100166';
+    let filter = 'name sw colour-swatch';
+    let startIndex = 0;
+    while (true) {
+      const contents = await this.getContents(filter, startIndex);
+      const swatchesDir = './swatches';
+      if (!fs.existsSync(swatchesDir)) {
+        fs.mkdirSync(swatchesDir);
+      }
+      for (const item of contents.items) {
+        if ( fs.existsSync(path.join(swatchesDir, item.name))) {
+          continue;
+        }
+
+        const url = `https://cdn-tp1.euw1.kibocommerce.com/100067-100166/cms/100166/files/${item.name}`;
+        const response = await fetch(url);
+        if (!response.ok) {
+          console.log(
+            `Failed to download swatch ${item.name}: ${response.statusText}`,
+          );
+          continue;
+        }
+        const buffer = await response.buffer();
+        const filePath = path.join(swatchesDir, item.name);
+        fs.writeFileSync(filePath, buffer);
+        console.log(`Downloaded swatch ${item.name}`);
+      }
+      startIndex += contents.pageSize;
+      if ( startIndex > contents.totalCount) {
+        break;
+      }
+    }
+  }
+
+  async syncFacets() {
+    this.headers.Authorization = `Bearer ${await this.postOAuth()}`;
+    const tenant = await this.getTenant(this.tenantId);
+    let categoryMap = await this.getCategoryMap();
+    for (const sitePair of this.sitePairs) {
+      const sourceSite = tenant.sites.find(
+        (site) => site.id === sitePair.source,
+      );
+      const destinationSite = tenant.sites.find(
+        (site) => site.id === sitePair.destination,
+      );
+
+      this.headers['x-vol-catalog'] = sourceSite.catalogId;
+      this.headers['x-vol-site'] = sourceSite.id;
+      const facets = await this.getFacets();
+
+      //sort so the origional comes before the override entry
+      facets.items.sort((a, b) => {
+        if (a.overrideFacetId && !b.overrideFacetId) {
+          return 1;
+        } else if (!a.overrideFacetId && b.overrideFacetId) {
+          return -1;
+        } else {
+          return 0;
+        }
+      });
+
+      this.headers['x-vol-catalog'] = destinationSite.catalogId;
+      this.headers['x-vol-site'] = destinationSite.id;
+
+      const destFacets = await this.getFacets();
+      var sourceMap = categoryMap[sourceSite.catalogId];
+      var destinationMap = categoryMap[destinationSite.catalogId];
+      for (const facet of facets.items) {
+        if (facet.categoryId) {
+          let mappedCategory =
+            destinationMap.categoryCodes[
+              sourceMap.ids[facet.categoryId].categoryCode
+            ];
+
+          facet.categoryCode = mappedCategory?.categoryCode;
+          facet.categoryId = mappedCategory?.id;
+        }
+
+        let existing = destFacets.items.find(
+          (x) =>
+            x.catalogId == facet.catalogId &&
+            x.source.id == facet.source.id &&
+            x.source.type == facet.source.type,
+        );
+        if (existing) {
+          facet.facetId = existing.facetId;
+          continue;
+        } else {
+          delete facet.facetId;
+        }
+        await this.saveFacet(facet);
+      }
+    }
+    delete this.headers['x-vol-site'];
+  }
+
   async syncSerachRedirects() {
     this.headers.Authorization = `Bearer ${await this.postOAuth()}`;
     const tenant = await this.getTenant(this.tenantId);
@@ -1025,6 +1170,6 @@ async function main() {
     sitePairs,
     tenantId,
   );
-  await catalogCloneUtil.syncProductInCatalogs();
+  await catalogCloneUtil.downloadSwatches();
 }
 main();
