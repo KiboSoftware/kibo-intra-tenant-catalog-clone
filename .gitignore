@@ -14,6 +14,7 @@ pids
 # Dependency directories
 node_modules/
 jspm_packages/
+swatches/
 
 # Optional eslint cache
 .eslintcache

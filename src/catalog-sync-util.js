@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 import { SingleBar, Presets } from 'cli-progress';
 import fs from 'fs';
 import path from 'path';
-import dotenv from 'dotenv';
+
 
 class CatalogCloneUtil {
   constructor(
@@ -57,6 +57,16 @@ class CatalogCloneUtil {
         body: JSON.stringify(data),
       },
     );
+    if (response.status > 300) {
+      let message = `Failed to get OAuth ticket - ${response.status} - ${response.statusText}`;
+
+      console.log(message);
+      if (response.headers.get('Content-Type').indexOf('json') > -1) {
+        const result = await response.json();
+        console.log(result);
+      }
+      throw new Error(message);
+    }
     const result = await response.json();
     this.state.ticket = result;
     this.state.ticket.expiresAt = Date.now() + result.expires_in * 1000;
@@ -115,6 +125,7 @@ class CatalogCloneUtil {
     if (tenant) {
       return tenant;
     }
+    this.headers.Authorization = `Bearer ${await this.postOAuth()}`;
     const response = await fetch(
       `${this.apiRoot}/platform/tenants/${tenantId}`,
       {
@@ -122,6 +133,14 @@ class CatalogCloneUtil {
         headers: this.headers,
       },
     );
+    if (response.status > 399) {
+      if (response.headers.get('Content-Type')?.indexOf('json') > -1) {
+        const result = await response.json();
+        console.log(result);
+        throw new Error(result.message);
+      }
+      throw new Error(response.statusText);
+    }
     this.state.tenants[tenantId] = await response.json();
     return this.state.tenants[tenantId];
   }
@@ -183,7 +202,7 @@ class CatalogCloneUtil {
       },
     );
     if (response.status !== 200) {
-      if (response.headers.get('Content-Type').indexOf('json') > -1) {
+      if (response.headers.get('Content-Type')?.indexOf('json') > -1) {
         const result = await response.json();
         console.log(result);
       }
@@ -763,15 +782,16 @@ class CatalogCloneUtil {
     }
 
     if (response.status > 299) {
-      let ret = await response.json();
+      
       console.log(`failed to save facet ${facet.facetId}`);
     }
   }
 
-  async getContents(filter, startIndex) {
-
-    const url = `${this.apiRoot}/content/documentlists/files@mozu/documents?filter=${filter}&pageSize=200&startIndex=${startIndex}`;
-    const response = await fetch(url, { method:'GET', headers: this.headers });
+  async getContents(filter, pagesize, startIndex) {
+    const url = `${
+      this.apiRoot
+    }/content/documentlists/files@mozu/documents?filter=${filter}&pageSize=200&startIndex=${startIndex}&ts=${new Date().getTime()}`;
+    const response = await fetch(url, { method: 'GET', headers: this.headers });
     if (!response.ok) {
       let foo = await response.json();
       throw new Error(`Failed to get contents: ${response.statusText}`);
@@ -782,36 +802,193 @@ class CatalogCloneUtil {
   async downloadSwatches() {
     this.headers.Authorization = `Bearer ${await this.postOAuth()}`;
     this.headers['x-vol-site'] = '100166';
-    let filter = 'name sw colour-swatch';
+    const filter = 'name sw colour-swatch';
+    const pageSize = 200;
     let startIndex = 0;
-    while (true) {
-      const contents = await this.getContents(filter, startIndex);
+
+    const downlaod = async function (item, filePath) {
+      const url = `https://cdn-tp1.euw1.kibocommerce.com/100067-100166/cms/100166/files/${item.id}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        console.log(
+          `Failed to download swatch ${item.name}: ${response.statusText}`,
+        );
+        return;
+      }
+      const buffer = await response.arrayBuffer();
+      fs.writeFileSync(filePath, buffer);
+      console.log(`Downloaded swatch ${item.name}`);
+    };
+    while (startIndex != -2) {
+      const contents = await this.getContents(filter, pageSize, startIndex);
       const swatchesDir = './swatches';
       if (!fs.existsSync(swatchesDir)) {
         fs.mkdirSync(swatchesDir);
       }
+      const promises = [];
       for (const item of contents.items) {
-        if ( fs.existsSync(path.join(swatchesDir, item.name))) {
+        if (fs.existsSync(path.join(swatchesDir, item.name))) {
           continue;
         }
+        promises.push(downlaod(item, path.join(swatchesDir, item.name)));
 
-        const url = `https://cdn-tp1.euw1.kibocommerce.com/100067-100166/cms/100166/files/${item.name}`;
-        const response = await fetch(url);
-        if (!response.ok) {
-          console.log(
-            `Failed to download swatch ${item.name}: ${response.statusText}`,
-          );
-          continue;
+        if (promises.length >= 5) {
+          try {
+            await Promise.all(promises);
+          } catch (err) {
+            console.log(err);
+          }
+          promises.length = 0;
         }
-        const buffer = await response.buffer();
-        const filePath = path.join(swatchesDir, item.name);
-        fs.writeFileSync(filePath, buffer);
-        console.log(`Downloaded swatch ${item.name}`);
       }
-      startIndex += contents.pageSize;
-      if ( startIndex > contents.totalCount) {
+      if (promises.length > 0) {
+        await Promise.all(promises);
+      }
+      if (contents.length < pageSize) {
         break;
       }
+      startIndex += pageSize;
+    }
+  }
+
+  async uploadSwatches() {
+    this.headers['x-vol-site'] = this.sitePairs[0].source;
+    this.headers.Authorization = `Bearer ${await this.postOAuth()}`;
+    const swatchesDir = './swatches';
+    if (!fs.existsSync(swatchesDir)) {
+      console.log(`Swatches directory ${swatchesDir} does not exist`);
+      return;
+    }
+    async function upload(file, apiRoot, headers) {
+      const filePath = path.join(swatchesDir, file);
+      const extension = path.extname(file).replace('.', '');
+      const name = path.basename(file, extension);
+      const documentTypeFQN = 'image@mozu';
+      const listFQN = 'files@mozu';
+      const contentMimeType = 'image/webp';
+      const createUrl = `${apiRoot}/content/documentlists/files@mozu/documents`;
+
+      const createResponse = await fetch(createUrl, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name,
+          extension,
+          documentTypeFQN,
+          listFQN,
+          contentMimeType,
+        }),
+      });
+      if (createResponse.status == 409) {
+        return;
+      }
+      if (!createResponse.ok) {
+        console.log(
+          `Failed to create document ${name}: ${createResponse.statusText}`,
+        );
+        let err = await createResponse.json();
+        return;
+      }
+      const createData = await createResponse.json();
+      const id = createData.id;
+      const contentUrl = `${apiRoot}/content/documentlists/files@mozu/documents/${id}/content`;
+      const contentBuffer = fs.readFileSync(filePath);
+      const contentResponse = await fetch(contentUrl, {
+        method: 'PUT',
+        headers: {
+          ...headers,
+          'Content-Type': contentMimeType,
+        },
+        body: contentBuffer,
+      });
+      if (!contentResponse.ok) {
+        console.log(
+          `Failed to upload content for document ${name}: ${contentResponse.statusText}`,
+        );
+        return;
+      }
+      console.log(`Uploaded document ${name}`);
+    }
+    const files = fs.readdirSync(swatchesDir);
+    const promises = [];
+    for (const file of files) {
+      const createPromise = upload(file, this.apiRoot, this.headers);
+      promises.push(createPromise);
+      if (promises.length >= 5) {
+        await Promise.all(promises);
+        promises.length = 0;
+      }
+    }
+    if (promises.length > 0) {
+      await Promise.all(promises);
+    }
+  }
+
+  async uploadSwatches2() {
+    const swatchesDir = './swatches';
+    if (!fs.existsSync(swatchesDir)) {
+      console.log(`Swatches directory ${swatchesDir} does not exist`);
+      return;
+    }
+    this.headers['x-vol-site'] = this.sitePairs[0].source;
+    this.headers.Authorization = `Bearer ${await this.postOAuth()}`;
+
+    const files = fs.readdirSync(swatchesDir);
+    for (const file of files) {
+      const filePath = path.join(swatchesDir, file);
+      const extension = path.extname(file).replace('.', '');
+      const name = path.basename(file, extension);
+      const documentTypeFQN = 'image@mozu';
+      const listFQN = 'files@mozu';
+      const contentMimeType = 'image/webp';
+      const createUrl = `${this.apiRoot}/content/documentlists/files@mozu/documents`;
+
+      const createResponse = await fetch(createUrl, {
+        method: 'POST',
+        headers: {
+          ...this.headers,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name,
+          extension,
+          documentTypeFQN,
+          listFQN,
+          contentMimeType,
+        }),
+      });
+      if (createResponse.status == 409) {
+        continue;
+      }
+      if (!createResponse.ok) {
+        console.log(
+          `Failed to create document ${name}: ${createResponse.statusText}`,
+        );
+        let err = await createResponse.json();
+        continue;
+      }
+      const createData = await createResponse.json();
+      const id = createData.id;
+      const contentUrl = `${this.apiRoot}/content/documentlists/files@mozu/documents/${id}/content`;
+      const contentBuffer = fs.readFileSync(filePath);
+      const contentResponse = await fetch(contentUrl, {
+        method: 'PUT',
+        headers: {
+          ...this.headers,
+          'Content-Type': contentMimeType,
+        },
+        body: contentBuffer,
+      });
+      if (!contentResponse.ok) {
+        console.log(
+          `Failed to upload content for document ${name}: ${contentResponse.statusText}`,
+        );
+        continue;
+      }
+      console.log(`Uploaded document ${name}`);
     }
   }
 
@@ -1056,6 +1233,116 @@ class CatalogCloneUtil {
     // Remove the site header
     delete this.headers['x-vol-site'];
   }
+
+  async validateAuth() {
+    await this.postOAuth();
+  }
+  async validateAccountSettings() {
+    const tenant = await this.getTenant(this.tenantId);
+    // Loop through the site pairs
+    for (const sitePair of this.sitePairs) {
+      // Get the source site
+      const sourceSite = tenant.sites.find(
+        (site) => site.id == sitePair.source,
+      );
+
+      // Get the destination site
+      const destinationSite = tenant.sites.find(
+        (site) => site.id == sitePair.destination,
+      );
+      if (!sourceSite) {
+        console.log(`Source site ${sitePair.source} not found`);
+        throw new Error(`Source site ${sitePair.source} not found`);
+      
+      }
+      if (!destinationSite) {
+        console.log(`Destination site ${sitePair.destination} not found`);
+        throw new Error(`Destination site ${sitePair.destination} not found`);
+  
+      }
+      if (sourceSite.localeCode != destinationSite.localeCode) {
+        console.log(
+          `Source site ${sitePair.source} locale ${sourceSite.localeCode} does not match destination site ${sitePair.destination} locale ${destinationSite.localeCode}`,
+        );
+        throw new Error(
+          `Source site ${sitePair.source} locale ${sourceSite.localeCode} does not match destination site ${sitePair.destination} locale ${destinationSite.localeCode}`,
+        );
+     
+      }
+    }
+    //loop thru catalog pairs
+
+    for (const catalogPair of this.catalogPairs) {
+      // Get the source catalog
+      const sourceCatalog = this.getCatalogById(
+        tenant.masterCatalogs,
+        catalogPair.source,
+      );
+      if (!sourceCatalog) {
+        console.log(`Source catalog ${catalogPair.source} not found`);
+        throw new Error(`Source catalog ${catalogPair.source} not found`);
+  
+      }
+
+      // Get the destination catalog
+      const destinationCatalog = this.getCatalogById(
+        tenant.masterCatalogs,
+        catalogPair.destination,
+      );
+      if (!destinationCatalog) {
+        console.log(`Destination catalog ${catalogPair.destination} not found`);
+        throw new Error(
+          `Destination catalog ${catalogPair.destination} not found`,
+        );
+  
+      }
+
+      if (
+        sourceCatalog.defaultLocaleCode !== destinationCatalog.defaultLocaleCode
+      ) {
+        console.log(
+          `Source catalog ${catalogPair.source} default currency ${sourceCatalog.defaultCurrencyCode} does not match destination catalog ${catalogPair.destination} default currency ${destinationCatalog.defaultCurrencyCode}`,
+        );
+        throw new Error(
+          `Source catalog ${catalogPair.source} default currency ${sourceCatalog.defaultCurrencyCode} does not match destination catalog ${catalogPair.destination} default currency ${destinationCatalog.defaultCurrencyCode}`,
+        );
+ 
+      }
+    }
+
+    //validate that the  this.primeCatalog exists
+    const primeCatalog = this.getCatalogById(
+      tenant.masterCatalogs,
+      this.primeCatalog,
+    );
+    if (!primeCatalog) {
+      console.log(`Prime catalog ${this.primeCatalog} not found`);
+      throw new Error(`Prime catalog ${this.primeCatalog} not found`);
+     
+    }
+
+    //validate that the this.masterCatalog exists
+    const mcExists = tenant.masterCatalogs.some(
+      (x) => x.id == this.masterCatalog,
+    );
+    if (!mcExists) {
+      console.log(`Master catalog ${this.masterCatalog} not found`);
+      throw new Error(`Master catalog ${this.masterCatalog} not found`);
+    
+    }
+
+    console.log(`validated config for tenant :[${tenant.id}]`);
+  }
+  getCatalogById(masterCatalogs, catalogId) {
+    for (const masterCatalog of masterCatalogs) {
+      for (const catalog of masterCatalog.catalogs) {
+        if (catalog.id == catalogId) {
+          return catalog;
+        }
+      }
+    }
+    return null;
+  }
   async categorySync() {
     this.headers.Authorization = `Bearer ${await this.postOAuth()}`;
     for (const catalogPair of this.catalogPairs) {
@@ -1149,27 +1436,28 @@ class CatalogCloneUtil {
 
 export default CatalogCloneUtil;
 
-async function main() {
-  dotenv.config();
+// async function main() {
+//   dotenv.config();
 
-  const apiRoot = process.env.API_URL;
-  const clientId = process.env.CLIENT_ID;
-  const clientSecret = process.env.CLIENT_SECRET;
-  const tenantId = apiRoot.match(/https:\/\/t(\d+)/)[1];
-  const masterCatalog = parseInt(process.env.MASTER_CATALOG);
-  const primeCatalog = parseInt(process.env.PRIME_CATALOG);
-  const catalogPairs = JSON.parse(process.env.CATALOG_PAIRS);
-  const sitePairs = JSON.parse(process.env.SITE_PAIRS);
-  const catalogCloneUtil = new CatalogCloneUtil(
-    apiRoot,
-    clientId,
-    clientSecret,
-    masterCatalog,
-    primeCatalog,
-    catalogPairs,
-    sitePairs,
-    tenantId,
-  );
-  await catalogCloneUtil.downloadSwatches();
-}
-main();
+//   const apiRoot = process.env.API_URL;
+//   const clientId = process.env.CLIENT_ID;
+//   const clientSecret = process.env.CLIENT_SECRET;
+//   const tenantId = apiRoot.match(/https:\/\/t(\d+)/)[1];
+//   const masterCatalog = parseInt(process.env.MASTER_CATALOG);
+//   const primeCatalog = parseInt(process.env.PRIME_CATALOG);
+//   const catalogPairs = JSON.parse(process.env.CATALOG_PAIRS);
+//   const sitePairs = JSON.parse(process.env.SITE_PAIRS);
+//   const catalogCloneUtil = new CatalogCloneUtil(
+//     apiRoot,
+//     clientId,
+//     clientSecret,
+//     masterCatalog,
+//     primeCatalog,
+//     catalogPairs,
+//     sitePairs,
+//     tenantId,
+//   );
+//   //await catalogCloneUtil.downloadSwatches();
+//   await catalogCloneUtil.uploadSwatches();
+// }
+// main();
