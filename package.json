@@ -2,7 +2,6 @@
   "name": "@kibocommerce/intra-tenant-catalog-clone",
   "version": "1.0.0",
   "description": "",
- 
   "engines": {
     "node": ">=16"
   },
@@ -21,6 +20,7 @@
   "type": "module",
   "dependencies": {
     "cli-progress": "^3.12.0",
+    "csv": "^6.3.3",
     "csv-parse": "^5.5.0",
     "csv-stringify": "^6.4.2",
     "dotenv": "^16.3.1",

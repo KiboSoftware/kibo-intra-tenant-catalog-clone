@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 import { SingleBar, Presets } from 'cli-progress';
 import fs from 'fs';
 import path from 'path';
-
+import dotenv from 'dotenv';
 
 class CatalogCloneUtil {
   constructor(
@@ -61,7 +61,7 @@ class CatalogCloneUtil {
       let message = `Failed to get OAuth ticket - ${response.status} - ${response.statusText}`;
 
       console.log(message);
-      if (response.headers.get('Content-Type').indexOf('json') > -1) {
+      if (response.headers.get('Content-Type')?.indexOf('json') > -1) {
         const result = await response.json();
         console.log(result);
       }
@@ -84,6 +84,18 @@ class CatalogCloneUtil {
     const data = await response.json();
     return data;
   }
+
+  async getProduct(productCode) {
+    let url = `${this.apiRoot}/commerce/catalog/admin/products/${productCode}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.headers,
+    });
+    const data = await response.json();
+    return data;
+  }
+
 
   async getProducts(startIndex, pageSize, lastSequence) {
     let url = `${this.apiRoot}/commerce/catalog/admin/products`;
@@ -782,7 +794,6 @@ class CatalogCloneUtil {
     }
 
     if (response.status > 299) {
-      
       console.log(`failed to save facet ${facet.facetId}`);
     }
   }
@@ -851,6 +862,104 @@ class CatalogCloneUtil {
     }
   }
 
+  async util1(){
+    this.headers.Authorization = `Bearer ${await this.postOAuth()}`;
+   
+    const productCodes = [
+      'T338020',
+      'T602413',
+      'T602624',
+      'T339132A',
+      'T338020G',
+      'T333040Z',
+      'T333040X',
+      'T333057F',
+      'T333077F',
+      'T103331P',
+      'T614100',
+      'T614107',
+    ];
+    this.headers['x-vol-master-catalog'] = '2';
+    for( const productCode of productCodes) {
+      const product = await this.getProduct(productCode);
+      let flag = false;
+      for( const pic of product.productInCatalogs) {
+        for ( const image of pic.content?.productImages || []) {
+          if ( image.imageUrl){
+            var cmsId = image.imageUrl.split('/').pop();
+            image.cmsId = cmsId;
+            delete image.imageUrl;
+            flag = true;
+          }          
+        }
+      }
+      for ( const image of product.content?.productImages || []) {
+        if ( image.imageUrl){
+          var cmsId = image.imageUrl.split('/').pop();
+          image.cmsId = cmsId;
+          delete image.imageUrl;
+          flag = true;
+        }          
+      }
+      if ( flag){
+        await this.saveProduct(product);
+      }
+      
+    }
+  }
+
+  async downloadImages() {
+    this.headers.Authorization = `Bearer ${await this.postOAuth()}`;
+    this.headers['x-vol-site'] = '100166';
+    const productCodes = [
+      'T338020',
+      'T602413',
+      'T602624',
+      'T339132A',
+      'T338020G',
+      'T333040Z',
+      'T333040X',
+      'T333057F',
+      'T333077F',
+      'T103331P',
+      'T614100',
+      'T614107',
+    ];
+    const pageSize = 200;
+    let startIndex = 0;
+
+    const downlaod = async function (item, filePath) {
+      const url = `https://cdn-tp1.euw1.kibocommerce.com/100067-100166/cms/100166/files/${item}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        console.log(
+          `Failed to download swatch ${item}: ${response.statusText}`,
+        );
+        return;
+      }
+      const buffer =  Buffer.from(await response.arrayBuffer());
+
+      fs.writeFileSync(filePath, buffer);
+      console.log(`Downloaded swatch ${item}`);
+    };
+    const cmsids= new Set();
+    for( const productCode of productCodes) {
+      const product = await this.getProduct(productCode);
+      for( const pic of product.productInCatalogs) {
+        for ( const image of pic.content?.productImages || []) {
+          cmsids.add(image.cmsId);
+        }
+      }
+    }
+    const swatchesDir = './swatches';
+    for( const cmsid of cmsids){
+      await downlaod(cmsid, path.join(swatchesDir, cmsid))
+    }   
+   
+    
+    
+  }
+
   async uploadSwatches() {
     this.headers['x-vol-site'] = this.sitePairs[0].source;
     this.headers.Authorization = `Bearer ${await this.postOAuth()}`;
@@ -862,6 +971,7 @@ class CatalogCloneUtil {
     async function upload(file, apiRoot, headers) {
       const filePath = path.join(swatchesDir, file);
       const extension = path.extname(file).replace('.', '');
+      let id = path.basename(file, extension);
       const name = path.basename(file, extension);
       const documentTypeFQN = 'image@mozu';
       const listFQN = 'files@mozu';
@@ -875,6 +985,7 @@ class CatalogCloneUtil {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          id,
           name,
           extension,
           documentTypeFQN,
@@ -893,7 +1004,7 @@ class CatalogCloneUtil {
         return;
       }
       const createData = await createResponse.json();
-      const id = createData.id;
+      id = createData.id;
       const contentUrl = `${apiRoot}/content/documentlists/files@mozu/documents/${id}/content`;
       const contentBuffer = fs.readFileSync(filePath);
       const contentResponse = await fetch(contentUrl, {
@@ -1253,12 +1364,10 @@ class CatalogCloneUtil {
       if (!sourceSite) {
         console.log(`Source site ${sitePair.source} not found`);
         throw new Error(`Source site ${sitePair.source} not found`);
-      
       }
       if (!destinationSite) {
         console.log(`Destination site ${sitePair.destination} not found`);
         throw new Error(`Destination site ${sitePair.destination} not found`);
-  
       }
       if (sourceSite.localeCode != destinationSite.localeCode) {
         console.log(
@@ -1267,7 +1376,6 @@ class CatalogCloneUtil {
         throw new Error(
           `Source site ${sitePair.source} locale ${sourceSite.localeCode} does not match destination site ${sitePair.destination} locale ${destinationSite.localeCode}`,
         );
-     
       }
     }
     //loop thru catalog pairs
@@ -1281,7 +1389,6 @@ class CatalogCloneUtil {
       if (!sourceCatalog) {
         console.log(`Source catalog ${catalogPair.source} not found`);
         throw new Error(`Source catalog ${catalogPair.source} not found`);
-  
       }
 
       // Get the destination catalog
@@ -1294,7 +1401,6 @@ class CatalogCloneUtil {
         throw new Error(
           `Destination catalog ${catalogPair.destination} not found`,
         );
-  
       }
 
       if (
@@ -1306,7 +1412,6 @@ class CatalogCloneUtil {
         throw new Error(
           `Source catalog ${catalogPair.source} default currency ${sourceCatalog.defaultCurrencyCode} does not match destination catalog ${catalogPair.destination} default currency ${destinationCatalog.defaultCurrencyCode}`,
         );
- 
       }
     }
 
@@ -1318,7 +1423,6 @@ class CatalogCloneUtil {
     if (!primeCatalog) {
       console.log(`Prime catalog ${this.primeCatalog} not found`);
       throw new Error(`Prime catalog ${this.primeCatalog} not found`);
-     
     }
 
     //validate that the this.masterCatalog exists
@@ -1328,7 +1432,6 @@ class CatalogCloneUtil {
     if (!mcExists) {
       console.log(`Master catalog ${this.masterCatalog} not found`);
       throw new Error(`Master catalog ${this.masterCatalog} not found`);
-    
     }
 
     console.log(`validated config for tenant :[${tenant.id}]`);
@@ -1437,6 +1540,7 @@ class CatalogCloneUtil {
 export default CatalogCloneUtil;
 
 // async function main() {
+  
 //   dotenv.config();
 
 //   const apiRoot = process.env.API_URL;
@@ -1458,6 +1562,6 @@ export default CatalogCloneUtil;
 //     tenantId,
 //   );
 //   //await catalogCloneUtil.downloadSwatches();
-//   await catalogCloneUtil.uploadSwatches();
+//   await catalogCloneUtil.fart();
 // }
 // main();
