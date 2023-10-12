@@ -4,11 +4,12 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import Yargs from 'yargs/yargs';
 import CatalogCloneUtil from '../src/catalog-sync-util.js';
+import { sync } from '../dist/commands/sync.js';
 
 dotenv.config();
 
 function createCloneUtil() {
-  validateVariables()
+  validateVariables();
   const apiRoot = process.env.API_URL;
   const clientId = process.env.CLIENT_ID;
   const clientSecret = process.env.CLIENT_SECRET;
@@ -30,9 +31,7 @@ function createCloneUtil() {
   return catalogCloneUtil;
 }
 
-
-
-async function  validateVariables() {
+async function validateVariables() {
   const apiUrl = process.env.API_URL;
   if (!apiUrl) {
     throw new Error('API_URL environment variable is not set');
@@ -107,7 +106,6 @@ async function  validateVariables() {
     );
   }
 
-
   const primeCatalog = process.env.PRIME_CATALOG;
   if (!primeCatalog) {
     throw new Error('PRIME_CATALOG environment variable is not set');
@@ -131,7 +129,6 @@ async function  validateVariables() {
       'MASTER_CATALOG environment variable is not a valid number',
     );
   }
- 
 }
 
 /*
@@ -150,7 +147,7 @@ Yargs(process.argv.slice(2))
   //   type: 'boolean',
   //   describe: 'include all resources',
   // })
-  
+
   .command({
     command: 'categories',
     desc: 'categories',
@@ -203,7 +200,15 @@ Yargs(process.argv.slice(2))
       );
     },
   })
-
+  .command({
+    command:
+      'sync-content [pages] [redirects] [catalogContent] [themeSettings]',
+    desc: 'sync-content',
+    args: {},
+    handler: (argv) => {
+      sync(argv);
+    },
+  })
   .command({
     command: 'products',
     desc: 'products',
@@ -211,7 +216,6 @@ Yargs(process.argv.slice(2))
       performActions(['syncProductInCatalogs'], argv);
     },
   })
-
   .command({
     command: 'clean-category-prefixes',
     desc: 'clean-category-prefixes',
@@ -237,17 +241,15 @@ Yargs(process.argv.slice(2))
   .strict()
   .help().argv;
 
-
-
 async function performActions(actions, args) {
   var app = createCloneUtil();
-  if( actions.indexOf('validateAccountSettings') == -1) {
+  if (actions.indexOf('validateAccountSettings') == -1) {
     actions.unshift('validateAccountSettings');
   }
   for (const action of actions) {
-    console.log ( `performing action ${action}`)
+    console.log(`performing action ${action}`);
     await app[action](args);
-    console.log ( `completed action ${action}`)
+    console.log(`completed action ${action}`);
   }
 }
 
@@ -269,7 +271,3 @@ MASTER_CATALOG=
   fs.writeFileSync('.env', template);
   console.log('update the .env.yaml file');
 }
-
-
-
-
