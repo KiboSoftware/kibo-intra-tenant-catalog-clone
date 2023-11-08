@@ -631,7 +631,7 @@ class CatalogCloneUtil {
             source.content &&
             prime.content?.productImages &&
             prime.content.productImages.length >
-              source.content.productImages.length
+             (source.content.productImages?.length||0)
           ) {
             source.content.productImages = prime.content?.productImages;
           }
@@ -755,10 +755,28 @@ class CatalogCloneUtil {
       this.headers['x-vol-catalog'] = sourceSite.catalogId;
       this.headers['x-vol-site'] = sourceSite.id;
       let rules = await this.getSearchMerchandizingRules();
+
+      function removePrefixAndCompare(obj) {
+        const str = JSON.stringify(obj);
+        const modifiedStr = str.replace(/KW-(EN|AR)-/g, '');
+        if (str !== modifiedStr) {
+          return JSON.parse(modifiedStr);
+        } else {
+          return null;
+        }
+      }
+
       for (const rule of rules.items) {
+        let newRule = removePrefixAndCompare(rule);
+        if ( newRule){
+          await this.saveSearchMerchandizingRules(newRule);
+        }
+      }
+      for (const rule of rules.items) {
+        let newRule = removePrefixAndCompare(rule) ||rule;
         this.headers['x-vol-catalog'] = destinationSite.catalogId;
         this.headers['x-vol-site'] = destinationSite.id;
-        await this.saveSearchMerchandizingRules(rule);
+        await this.saveSearchMerchandizingRules(newRule);
       }
     }
     delete this.headers['x-vol-site'];

@@ -6,6 +6,9 @@ import Yargs from 'yargs/yargs';
 import CatalogCloneUtil from '../src/catalog-sync-util.js';
 
 dotenv.config();
+import {bootstrap} from 'global-agent';
+bootstrap();
+
 
 function createCloneUtil() {
   validateVariables()
@@ -80,7 +83,7 @@ async function  validateVariables() {
   } catch (error) {
     throw new Error(
       'CATALOG_PAIRS environment variable is not a valid JSON array',
-    );
+    );""
   }
 
   const sitePairs = process.env.SITE_PAIRS;
