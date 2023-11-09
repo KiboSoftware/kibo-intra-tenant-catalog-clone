@@ -13,6 +13,9 @@
   "rules": {
     "no-console": "off",
     "no-extra-semi": "off",
-    "no-unused-vars":"warn"
+    "no-unused-vars": "warn",
+    "no-unreachable": "warn",
+    "no-redeclare": "off",
+    "no-inner-declarations": "warn"
   }
 }

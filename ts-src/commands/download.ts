@@ -1,14 +1,20 @@
-import { config } from '../config'
-import { Configuration } from '@kibocommerce/rest-sdk'
-import DocumentRetriever from '../lib/document-retriever'
-import { DOCUMENT_LISTS } from '../lib/constants'
+import { config } from '../config';
+import { Configuration } from '@kibocommerce/rest-sdk';
+import DocumentRetriever from '../lib/document-retriever';
+import { DOCUMENT_LISTS } from '../lib/constants';
 
 async function download() {
-  const sourceConfig = new Configuration(config.source.api)
-  const sourceDocumentRetriever = new DocumentRetriever(sourceConfig, './output/source')
+  const sourceConfig = new Configuration(config.source.api);
+  const sourceDocumentRetriever = new DocumentRetriever(
+    sourceConfig,
+    './output/source',
+  );
 
-  const targetConfig = new Configuration(config.target.api)
-  const targetDocumentRetriever = new DocumentRetriever(targetConfig, './output/target')
+  const targetConfig = new Configuration(config.target.api);
+  const targetDocumentRetriever = new DocumentRetriever(
+    targetConfig,
+    './output/target',
+  );
 
   await Promise.all([
     targetDocumentRetriever.load(
@@ -18,7 +24,7 @@ async function download() {
         DOCUMENT_LISTS.PAGE_TEMPLATE_CONTENT,
         DOCUMENT_LISTS.CATALOG_CONTENT,
       ],
-      true
+      true,
     ),
     sourceDocumentRetriever.load(
       [
@@ -27,9 +33,9 @@ async function download() {
         DOCUMENT_LISTS.PAGE_TEMPLATE_CONTENT,
         DOCUMENT_LISTS.CATALOG_CONTENT,
       ],
-      true
+      true,
     ),
-  ])
+  ]);
 }
 
-download()
+download();

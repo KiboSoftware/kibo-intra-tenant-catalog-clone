@@ -2,7 +2,6 @@ import fetch from 'node-fetch';
 import { SingleBar, Presets } from 'cli-progress';
 import fs from 'fs';
 import path from 'path';
-import dotenv from 'dotenv';
 
 class CatalogCloneUtil {
   constructor(
@@ -87,7 +86,7 @@ class CatalogCloneUtil {
 
   async getProduct(productCode) {
     let url = `${this.apiRoot}/commerce/catalog/admin/products/${productCode}`;
-    
+
     const response = await fetch(url, {
       method: 'GET',
       headers: this.headers,
@@ -95,7 +94,6 @@ class CatalogCloneUtil {
     const data = await response.json();
     return data;
   }
-
 
   async getProducts(startIndex, pageSize, lastSequence) {
     let url = `${this.apiRoot}/commerce/catalog/admin/products`;
@@ -631,7 +629,7 @@ class CatalogCloneUtil {
             source.content &&
             prime.content?.productImages &&
             prime.content.productImages.length >
-             (source.content.productImages?.length||0)
+              (source.content.productImages?.length || 0)
           ) {
             source.content.productImages = prime.content?.productImages;
           }
@@ -757,6 +755,7 @@ class CatalogCloneUtil {
       let rules = await this.getSearchMerchandizingRules();
 
       function removePrefixAndCompare(obj) {
+        // eslint-disable-line
         const str = JSON.stringify(obj);
         const modifiedStr = str.replace(/KW-(EN|AR)-/g, '');
         if (str !== modifiedStr) {
@@ -768,12 +767,12 @@ class CatalogCloneUtil {
 
       for (const rule of rules.items) {
         let newRule = removePrefixAndCompare(rule);
-        if ( newRule){
+        if (newRule) {
           await this.saveSearchMerchandizingRules(newRule);
         }
       }
       for (const rule of rules.items) {
-        let newRule = removePrefixAndCompare(rule) ||rule;
+        let newRule = removePrefixAndCompare(rule) || rule;
         this.headers['x-vol-catalog'] = destinationSite.catalogId;
         this.headers['x-vol-site'] = destinationSite.id;
         await this.saveSearchMerchandizingRules(newRule);
@@ -880,9 +879,9 @@ class CatalogCloneUtil {
     }
   }
 
-  async util1(){
+  async util1() {
     this.headers.Authorization = `Bearer ${await this.postOAuth()}`;
-   
+
     const productCodes = [
       'T338020',
       'T602413',
@@ -898,31 +897,31 @@ class CatalogCloneUtil {
       'T614107',
     ];
     this.headers['x-vol-master-catalog'] = '2';
-    for( const productCode of productCodes) {
+    for (const productCode of productCodes) {
       const product = await this.getProduct(productCode);
       let flag = false;
-      for( const pic of product.productInCatalogs) {
-        for ( const image of pic.content?.productImages || []) {
-          if ( image.imageUrl){
+      for (const pic of product.productInCatalogs) {
+        for (const image of pic.content?.productImages || []) {
+          if (image.imageUrl) {
             var cmsId = image.imageUrl.split('/').pop();
             image.cmsId = cmsId;
             delete image.imageUrl;
             flag = true;
-          }          
+          }
         }
       }
-      for ( const image of product.content?.productImages || []) {
-        if ( image.imageUrl){
-          var cmsId = image.imageUrl.split('/').pop();
+      for (const image of product.content?.productImages || []) {
+        if (image.imageUrl) {
+          var cmsId = image.imageUrl.split('/').pop(); // eslint-disable-line
+          // eslint-disable-next-line
           image.cmsId = cmsId;
           delete image.imageUrl;
           flag = true;
-        }          
+        }
       }
-      if ( flag){
+      if (flag) {
         await this.saveProduct(product);
       }
-      
     }
   }
 
@@ -955,27 +954,24 @@ class CatalogCloneUtil {
         );
         return;
       }
-      const buffer =  Buffer.from(await response.arrayBuffer());
+      const buffer = Buffer.from(await response.arrayBuffer());
 
       fs.writeFileSync(filePath, buffer);
       console.log(`Downloaded swatch ${item}`);
     };
-    const cmsids= new Set();
-    for( const productCode of productCodes) {
+    const cmsids = new Set();
+    for (const productCode of productCodes) {
       const product = await this.getProduct(productCode);
-      for( const pic of product.productInCatalogs) {
-        for ( const image of pic.content?.productImages || []) {
+      for (const pic of product.productInCatalogs) {
+        for (const image of pic.content?.productImages || []) {
           cmsids.add(image.cmsId);
         }
       }
     }
     const swatchesDir = './swatches';
-    for( const cmsid of cmsids){
-      await downlaod(cmsid, path.join(swatchesDir, cmsid))
-    }   
-   
-    
-    
+    for (const cmsid of cmsids) {
+      await downlaod(cmsid, path.join(swatchesDir, cmsid));
+    }
   }
 
   async uploadSwatches() {
@@ -1558,7 +1554,7 @@ class CatalogCloneUtil {
 export default CatalogCloneUtil;
 
 // async function main() {
-  
+
 //   dotenv.config();
 
 //   const apiRoot = process.env.API_URL;

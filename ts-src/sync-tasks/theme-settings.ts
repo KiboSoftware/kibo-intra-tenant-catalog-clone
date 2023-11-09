@@ -1,48 +1,52 @@
-import { Configuration } from '@kibocommerce/rest-sdk'
-import { DocumentsApi, Document } from '@kibocommerce/rest-sdk/clients/Content'
-import { DOCUMENT_LISTS } from '../lib/constants'
+import { Configuration } from '@kibocommerce/rest-sdk';
+import { DocumentsApi, Document } from '@kibocommerce/rest-sdk/clients/Content';
+import { DOCUMENT_LISTS } from '../lib/constants';
 
-const THEME_SETTINGS_PREFIX = 'theme_settings_'
+const THEME_SETTINGS_PREFIX = 'theme_settings_';
 function filterThemeSettings(documents: Document[]): Document[] {
   return (
-    (documents?.filter((doc) => doc.name?.startsWith(THEME_SETTINGS_PREFIX)) as Document[]) || []
-  )
+    (documents?.filter(
+      (doc) => doc.name?.startsWith(THEME_SETTINGS_PREFIX),
+    ) as Document[]) || []
+  );
 }
 function cloneDocument(themeSettingsDoc: Document): any {
-  const { insertDate, updateDate, id, ...rest } = themeSettingsDoc
-  return rest
+  const { insertDate, updateDate, id, ...rest } = themeSettingsDoc;
+  return rest;
 }
 function themeIdComparator(source: Document, target: Document) {
-  return source.properties?.theme === target?.properties?.theme
+  return source.properties?.theme === target?.properties?.theme;
 }
 export class SyncThemeSettings {
-  private api: DocumentsApi
-  private overwrite: boolean
-  public results: any
+  private api: DocumentsApi;
+  private overwrite: boolean;
+  public results: any;
   constructor(
     public sourceDoc: Map<string, Document[]>,
     public targetDoc: Map<string, Document[]>,
     private targetConfiguration: Configuration,
-    overwrite: boolean = false
+    overwrite: boolean = false,
   ) {
-    this.api = new DocumentsApi(targetConfiguration)
-    this.overwrite = overwrite
-    this.results = { errors: [], created: [], updated: [] }
+    this.api = new DocumentsApi(targetConfiguration);
+    this.overwrite = overwrite;
+    this.results = { errors: [], created: [], updated: [] };
   }
   async sync() {
     const sourceThemeSettings = filterThemeSettings(
-      this.sourceDoc.get(DOCUMENT_LISTS.SITE_SETTINGS) as Document[]
-    )
+      this.sourceDoc.get(DOCUMENT_LISTS.SITE_SETTINGS) as Document[],
+    );
     const targetThemeSettings = filterThemeSettings(
-      this.targetDoc.get(DOCUMENT_LISTS.SITE_SETTINGS) as Document[]
-    )
+      this.targetDoc.get(DOCUMENT_LISTS.SITE_SETTINGS) as Document[],
+    );
     for (const sourceDoc of sourceThemeSettings) {
-      const targetDoc = targetThemeSettings.find((doc) => themeIdComparator(sourceDoc, doc))
+      const targetDoc = targetThemeSettings.find((doc) =>
+        themeIdComparator(sourceDoc, doc),
+      );
       if (targetDoc) {
-        await this.updateDocument(targetDoc, sourceDoc)
+        await this.updateDocument(targetDoc, sourceDoc);
       } else {
-        const clonedDocument = cloneDocument(sourceDoc)
-        await this.createDocument(clonedDocument)
+        const clonedDocument = cloneDocument(sourceDoc);
+        await this.createDocument(clonedDocument);
       }
     }
   }
@@ -51,29 +55,32 @@ export class SyncThemeSettings {
       const newDocument = await this.api.createDocument({
         document: targetDocument,
         documentListName: targetDocument.listFQN as string,
-      })
-      this.results.created.push(newDocument)
-      return newDocument
+      });
+      this.results.created.push(newDocument);
+      return newDocument;
     } catch (error) {
-      this.results.errors.push(error)
-      console.error(`Error creating document: ${error}`)
+      this.results.errors.push(error);
+      console.error(`Error creating document: ${error}`);
     }
   }
-  private async updateDocument(targetDocument: Document, sourceDocument: Document) {
+  private async updateDocument(
+    targetDocument: Document,
+    sourceDocument: Document,
+  ) {
     try {
-      targetDocument.properties = sourceDocument.properties
+      targetDocument.properties = sourceDocument.properties;
       const updatedDoc = await this.api.updateDocument({
         documentId: targetDocument.id as string,
         document: targetDocument,
         documentListName: targetDocument.listFQN as string,
-      })
-      this.results.updated.push(updatedDoc)
-      return updatedDoc
+      });
+      this.results.updated.push(updatedDoc);
+      return updatedDoc;
     } catch (error) {
-      this.results.errors.push(error)
+      this.results.errors.push(error);
       console.error(
-        `Error updating document: ${error} source_name: ${sourceDocument.name} target_name: ${targetDocument.name}`
-      )
+        `Error updating document: ${error} source_name: ${sourceDocument.name} target_name: ${targetDocument.name}`,
+      );
     }
   }
 }

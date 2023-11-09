@@ -11,11 +11,13 @@ Ensure you have Node.js 16+ installed.
 ### Setup
 
 1. Install dependencies:
+
    ```bash
    npm install @kibocommerce:intra-tenant-catalog-clone
    ```
 
 2. Make sure the `.env` file is set up with the required environment variables:
+
    - `API_URL`: The API endpoint.
    - `CLIENT_ID`: Client ID for the API.
    - `CLIENT_SECRET`: Client secret for the API.
@@ -51,6 +53,7 @@ npx @kibocommerce:intra-tenant-catalog-clone [command]
 Replace `[command]` with any of the available commands listed above.
 
 Example:
+
 ```bash
 npx @kibocommerce:intra-tenant-catalog-clone categories
 ```

@@ -1,16 +1,19 @@
-import { Configuration } from '@kibocommerce/rest-sdk'
-import DocumentRetriever from '../lib/document-retriever'
-import { DOCUMENT_LISTS } from '../lib/constants'
+import { Configuration } from '@kibocommerce/rest-sdk';
+import DocumentRetriever from '../lib/document-retriever';
+import { DOCUMENT_LISTS } from '../lib/constants';
 
 import {
   DocumentPublishingApi,
   DocumentsApi,
   Document,
-} from '@kibocommerce/rest-sdk/clients/Content'
-import { config } from '../config'
+} from '@kibocommerce/rest-sdk/clients/Content';
+import { config } from '../config';
 
 async function loadTargetDocuments(targetConfig: Configuration) {
-  const targetDocumentRetriever = new DocumentRetriever(targetConfig, './output/target')
+  const targetDocumentRetriever = new DocumentRetriever(
+    targetConfig,
+    './output/target',
+  );
   const targetDocuments = await targetDocumentRetriever.load(
     [
       DOCUMENT_LISTS.PAGES,
@@ -18,9 +21,9 @@ async function loadTargetDocuments(targetConfig: Configuration) {
       DOCUMENT_LISTS.PAGE_TEMPLATE_CONTENT,
       DOCUMENT_LISTS.CATALOG_CONTENT,
     ],
-    false
-  )
-  return targetDocuments
+    false,
+  );
+  return targetDocuments;
 }
 async function clearTargetDrafts(api: DocumentPublishingApi) {
   for (const documentList of [
@@ -29,7 +32,7 @@ async function clearTargetDrafts(api: DocumentPublishingApi) {
     DOCUMENT_LISTS.PAGE_TEMPLATE_CONTENT,
     DOCUMENT_LISTS.CATALOG_CONTENT,
   ]) {
-    await api.deleteDocumentDrafts({ documentLists: documentList })
+    await api.deleteDocumentDrafts({ documentLists: documentList });
   }
 }
 async function deleteDocuments(api: any, content: any) {
@@ -37,21 +40,21 @@ async function deleteDocuments(api: any, content: any) {
     await api.deleteDocument({
       documentListName: doc.listFQN,
       documentId: doc.id as string,
-    })
+    });
   }
 }
 export async function clearTarget() {
-  const targetConfig = new Configuration(config.target.api)
-  const api = new DocumentsApi(targetConfig)
-  const targetPublishing = new DocumentPublishingApi(targetConfig)
-  const targetDocuments = await loadTargetDocuments(targetConfig)
+  const targetConfig = new Configuration(config.target.api);
+  const api = new DocumentsApi(targetConfig);
+  const targetPublishing = new DocumentPublishingApi(targetConfig);
+  const targetDocuments = await loadTargetDocuments(targetConfig);
   // const pages = targetDocuments.get(DOCUMENT_LISTS.PAGES)
   // const content = targetDocuments.get(DOCUMENT_LISTS.PAGE_TEMPLATE_CONTENT)
-  const catalogContent = targetDocuments.get(DOCUMENT_LISTS.CATALOG_CONTENT)
-  await clearTargetDrafts(targetPublishing)
+  const catalogContent = targetDocuments.get(DOCUMENT_LISTS.CATALOG_CONTENT);
+  await clearTargetDrafts(targetPublishing);
   // await deleteDocuments(api, content)
   // await deleteDocuments(api, pages)
-  await deleteDocuments(api, catalogContent)
+  await deleteDocuments(api, catalogContent);
 
   // const nav = targetDocuments
   //   .get(DOCUMENT_LISTS.SITE_SETTINGS)
@@ -64,9 +67,9 @@ export async function clearTarget() {
   //     document: nav,
   //   })
   // }
-  await targetPublishing.publishDocuments()
+  await targetPublishing.publishDocuments();
 }
 
-;(async () => {
-  await clearTarget()
-})()
+(async () => {
+  await clearTarget();
+})();

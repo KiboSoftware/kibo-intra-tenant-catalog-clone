@@ -9,12 +9,13 @@
     "catalog-clone": "./bin/index.js"
   },
   "scripts": {
-    "pretier": "prettier --write .",
+    "prettier": "prettier --write .",
     "lint": "eslint .",
     "lint2": "eslint src/catalog-sync-util.js ",
     "lint-reset": "eslint --no-eslintrc --env es6 --parser-options=ecmaVersion:2018 --reset --cache --cache-location node_modules/.cache/eslint/",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc"
+    "build": "tsc",
+    "prepare": "husky install"
   },
   "author": "",
   "license": "ISC",
@@ -40,6 +41,7 @@
     "eslint-plugin-babel": "^5.3.1",
     "eslint-plugin-import": "^2.24.2",
     "eslint-plugin-react": "^7.33.2",
+    "husky": "^8.0.3",
     "prettier": "^3.0.3",
     "yargs": "^17.7.2"
   }
