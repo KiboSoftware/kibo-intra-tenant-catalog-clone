@@ -1,15 +1,15 @@
 import { Configuration } from '@kibocommerce/rest-sdk';
-import { Site } from '../lib/site';
+import { Site } from '../lib/site.js';
 import {
   SyncRedirects,
   SyncCatalogContent,
   SyncPageContent,
   SyncThemeSettings,
-} from '../sync-tasks';
-import { config } from '../config';
-import { DOCUMENT_NAMES } from '../lib/constants';
-import { CategoryComparator, CategoryMap } from '../lib/category-map';
-import type { RedirectTransformer } from '../sync-tasks/redirects';
+} from '../sync-tasks/index.js';
+import { config } from '../config.js';
+import { DOCUMENT_NAMES } from '../lib/constants.js';
+import { CategoryComparator, CategoryMap } from '../lib/category-map.js';
+import type { RedirectTransformer } from '../sync-tasks/redirects.js';
 import path from 'path';
 import fs from 'fs/promises';
 import { Document } from '@kibocommerce/rest-sdk/clients/Content';
@@ -180,7 +180,7 @@ async function dumpErrors(
   }
 }
 
-export async function sync(args: any) {
+export default async function sync(args: any) {
   const sourceSite = await Site.initSite(config.source, './output/source');
   const targetSite = await Site.initSite(config.target, './output/target');
   let redirectResult, catalogContentResult, pageResult, themeSettingsResult;

@@ -1,7 +1,7 @@
-import { Configuration } from '@kibocommerce/rest-sdk';
+import { Configuration } from '@kibocommerce/rest-sdk/index.js';
 import type { Document } from '@kibocommerce/rest-sdk/clients/Content';
-import DocumentRetreiver from './document-retriever';
-import { DOCUMENT_LISTS, DOCUMENT_NAMES } from './constants';
+import DocumentRetreiver from './document-retriever.js';
+import { DOCUMENT_LISTS, DOCUMENT_NAMES } from './constants.js';
 
 const findRedirectDoc = (siteSettings?: Document[]) =>
   siteSettings?.find((doc: Document) => doc.name === DOCUMENT_NAMES.REDIRECTS);

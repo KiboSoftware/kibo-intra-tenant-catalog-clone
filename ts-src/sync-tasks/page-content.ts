@@ -3,13 +3,13 @@ import type {
   Document,
   DocumentsApiCreateDocumentRequest,
 } from '@kibocommerce/rest-sdk/clients/Content';
-import { DocumentsApi } from '@kibocommerce/rest-sdk/clients/Content/';
-import { DOCUMENT_LISTS } from '../lib/constants';
+import { DocumentsApi } from '@kibocommerce/rest-sdk/clients/Content/index.js';
+import { DOCUMENT_LISTS } from '../lib/constants.js';
 import {
   CmsPage,
   MultiSitePage,
   MultiSitePageMap,
-} from '../lib/multi-site-page';
+} from '../lib/multi-site-page.js';
 
 function cloneDocument(page: Document) {
   let { id, insertDate, updateDate, contentUpdateDate, ...rest } = page;

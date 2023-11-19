@@ -1,7 +1,7 @@
-import { config } from '../config';
+import { config } from '../config.js';
 import { Configuration } from '@kibocommerce/rest-sdk';
-import DocumentRetriever from '../lib/document-retriever';
-import { DOCUMENT_LISTS } from '../lib/constants';
+import DocumentRetriever from '../lib/document-retriever.js';
+import { DOCUMENT_LISTS } from '../lib/constants.js';
 
 async function download() {
   const sourceConfig = new Configuration(config.source.api);

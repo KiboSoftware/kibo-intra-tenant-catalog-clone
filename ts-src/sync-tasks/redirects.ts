@@ -1,7 +1,7 @@
 import { Configuration } from '@kibocommerce/rest-sdk';
-import { DocumentsApi, Document } from '@kibocommerce/rest-sdk/clients/Content';
-import { DOCUMENT_LISTS } from '../lib/constants';
-import apiFetch from '../lib/api-fetch';
+import { DocumentsApi, Document } from '@kibocommerce/rest-sdk/clients/Content/index.js';
+import { DOCUMENT_LISTS } from '../lib/constants.js';
+import apiFetch from '../lib/api-fetch.js';
 
 export type DocumentWithContent = {
   name: string;

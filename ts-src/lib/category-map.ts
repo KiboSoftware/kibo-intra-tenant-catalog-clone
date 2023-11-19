@@ -1,9 +1,9 @@
 import type { Configuration } from '@kibocommerce/rest-sdk';
-import ActionTracker from './action-tracker';
+// import ActionTracker from './action-tracker';
 import {
   CategoriesApi,
   Category,
-} from '@kibocommerce/rest-sdk/clients/CatalogAdministration';
+} from '@kibocommerce/rest-sdk/clients/CatalogAdministration/index.js';
 
 export type CategoryComparator = (
   source: Category,

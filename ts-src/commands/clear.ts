@@ -1,13 +1,13 @@
 import { Configuration } from '@kibocommerce/rest-sdk';
-import DocumentRetriever from '../lib/document-retriever';
-import { DOCUMENT_LISTS } from '../lib/constants';
+import DocumentRetriever from '../lib/document-retriever.js';
+import { DOCUMENT_LISTS } from '../lib/constants.js';
 
 import {
   DocumentPublishingApi,
   DocumentsApi,
   Document,
 } from '@kibocommerce/rest-sdk/clients/Content';
-import { config } from '../config';
+import { config } from '../config.js';
 
 async function loadTargetDocuments(targetConfig: Configuration) {
   const targetDocumentRetriever = new DocumentRetriever(

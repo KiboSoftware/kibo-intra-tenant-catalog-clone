@@ -3,9 +3,9 @@ import type {
   Document,
   DocumentsApiCreateDocumentRequest,
 } from '@kibocommerce/rest-sdk/clients/Content';
-import { DocumentsApi } from '@kibocommerce/rest-sdk/clients/Content/';
-import { DOCUMENT_LISTS } from '../lib/constants';
-import { CategoryMap } from '../lib/category-map';
+import { DocumentsApi } from '@kibocommerce/rest-sdk/clients/Content/index.js';
+import { DOCUMENT_LISTS } from '../lib/constants.js';
+import { CategoryMap } from '../lib/category-map.js';
 
 function parseCategoryId(name?: string): number | undefined {
   if (!name) return;

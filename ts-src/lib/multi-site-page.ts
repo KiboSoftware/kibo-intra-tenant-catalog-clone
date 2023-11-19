@@ -1,4 +1,4 @@
-import { DOCUMENT_LISTS } from './constants';
+import { DOCUMENT_LISTS } from './constants.js';
 import type { Document } from '@kibocommerce/rest-sdk/clients/Content';
 
 export class CmsPage {

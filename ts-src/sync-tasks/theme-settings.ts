@@ -1,6 +1,6 @@
 import { Configuration } from '@kibocommerce/rest-sdk';
-import { DocumentsApi, Document } from '@kibocommerce/rest-sdk/clients/Content';
-import { DOCUMENT_LISTS } from '../lib/constants';
+import { DocumentsApi, Document } from '@kibocommerce/rest-sdk/clients/Content/index.js';
+import { DOCUMENT_LISTS } from '../lib/constants.js';
 
 const THEME_SETTINGS_PREFIX = 'theme_settings_';
 function filterThemeSettings(documents: Document[]): Document[] {

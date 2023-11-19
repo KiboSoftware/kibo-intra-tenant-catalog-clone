@@ -1,13 +1,13 @@
 import type { Configuration } from '@kibocommerce/rest-sdk';
-import { DocumentsApi } from '@kibocommerce/rest-sdk/clients/Content/';
+import { DocumentsApi } from '@kibocommerce/rest-sdk/clients/Content/index.js';
 import type {
   DocumentsApiGetDocumentsRequest,
   Document,
 } from '@kibocommerce/rest-sdk/clients/Content';
-import ActionTracker from './action-tracker';
+import ActionTracker from './action-tracker.js';
 import fs from 'fs/promises';
 import path from 'path';
-import apiFetch from './api-fetch';
+import apiFetch from './api-fetch.js';
 
 class DocumentRetriever {
   private outputDirectory?: string;

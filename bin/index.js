@@ -4,8 +4,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import Yargs from 'yargs/yargs';
 import CatalogCloneUtil from '../src/catalog-sync-util.js';
-
-import { sync } from '../dist/commands/sync.js';
+import syncContent from '../dist/commands/sync.js'
 
 dotenv.config();
 import { bootstrap } from 'global-agent';
@@ -209,7 +208,7 @@ Yargs(process.argv.slice(2))
     desc: 'sync-content',
     args: {},
     handler: (argv) => {
-      sync(argv);
+      syncContent(argv);
     },
   })
   .command({

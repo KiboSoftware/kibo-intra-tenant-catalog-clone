@@ -1,4 +1,4 @@
-export { SyncRedirects } from './redirects';
-export { SyncPageContent } from './page-content';
-export { SyncCatalogContent } from './catalog-content';
-export { SyncThemeSettings } from './theme-settings';
+export { SyncRedirects } from './redirects.js';
+export { SyncPageContent } from './page-content.js';
+export { SyncCatalogContent } from './catalog-content.js';
+export { SyncThemeSettings } from './theme-settings.js';
