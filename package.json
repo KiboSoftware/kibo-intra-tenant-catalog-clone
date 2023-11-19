@@ -21,7 +21,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
-    "@kibocommerce/rest-sdk": "^0.0.16",
+    "@kibocommerce/rest-sdk": "^0.0.21",
     "cli-progress": "^3.12.0",
     "csv": "^6.3.3",
     "csv-parse": "^5.5.0",

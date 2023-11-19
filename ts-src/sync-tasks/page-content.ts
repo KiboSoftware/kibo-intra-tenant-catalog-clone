@@ -86,11 +86,18 @@ export class SyncPageContent {
   }
   async syncMultiSiteNavigation() {
     const navigationData = await this.buildTargetNavigationData();
-    const targetNavDoc = this.targetDocs
+    let targetNavDoc = this.targetDocs
       .get(DOCUMENT_LISTS.SITE_SETTINGS)
-      ?.find((doc) => doc.name === 'navigation');
+      ?.find((doc) => doc.name === 'navigation') as Document;
     if (!targetNavDoc) {
-      throw new Error('Could not find target navigation document');
+      targetNavDoc = {} as Document;
+      targetNavDoc.name = 'navigation';
+      targetNavDoc.listFQN = DOCUMENT_LISTS.SITE_SETTINGS;
+      targetNavDoc.documentTypeFQN = "document@mozu";
+      targetNavDoc.properties= {};
+      targetNavDoc.properties.data = navigationData;
+      await this.createDocument(targetNavDoc);
+      return;
     }
     targetNavDoc.properties.data = navigationData;
     await this.updateDocument(targetNavDoc);

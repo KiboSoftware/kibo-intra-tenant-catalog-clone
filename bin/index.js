@@ -202,9 +202,35 @@ Yargs(process.argv.slice(2))
       );
     },
   })
+  .command('sync-content', 'sync-content', (yargs) => {
+    yargs.options({
+      pages: {
+        type: 'boolean',
+        description: 'Specify pages',
+        requiresArg: false,
+      },
+      redirects: {
+        type: 'boolean',
+        description: 'Specify redirects',
+        requiresArg: false,
+      },
+      catalogContent: {
+        type: 'boolean',
+        description: 'Specify catalog content',
+        requiresArg: false,
+      },
+      themeSettings: {
+        type: 'boolean',
+        description: 'Specify theme settings',
+        requiresArg: false,
+      },
+    });
+  }, (argv) => {
+    syncContent(argv);
+  })
   .command({
     command:
-      'sync-content [pages] [redirects] [catalogContent] [themeSettings]',
+      'sync-content2 [pages] [redirects] [catalogContent] [themeSettings]',
     desc: 'sync-content',
     args: {},
     handler: (argv) => {
