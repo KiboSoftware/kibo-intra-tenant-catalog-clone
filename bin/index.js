@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import Yargs from 'yargs/yargs';
 import CatalogCloneUtil from '../src/catalog-sync-util.js';
+
 import { sync } from '../dist/commands/sync.js';
 
 dotenv.config();
