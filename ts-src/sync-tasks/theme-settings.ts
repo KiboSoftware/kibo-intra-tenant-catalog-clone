@@ -1,5 +1,8 @@
 import { Configuration } from '@kibocommerce/rest-sdk';
-import { DocumentsApi, Document } from '@kibocommerce/rest-sdk/clients/Content/index.js';
+import {
+  DocumentsApi,
+  Document,
+} from '@kibocommerce/rest-sdk/clients/Content/index.js';
 import { DOCUMENT_LISTS } from '../lib/constants.js';
 
 const THEME_SETTINGS_PREFIX = 'theme_settings_';

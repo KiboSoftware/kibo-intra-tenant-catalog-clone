@@ -1,12 +1,12 @@
 {
   "name": "@kibocommerce/intra-tenant-catalog-clone",
-  "version": "1.0.0",
-  "description": "",
+  "version": "0.0.22",
+  "description": "Kibo Cross Catalog Clone",
   "engines": {
     "node": ">=16"
   },
   "bin": {
-    "catalog-clone": "./bin/index.js"
+    "kibo-cross-catalog-clone": "./bin/index.js"
   },
   "scripts": {
     "prettier": "prettier --write .",
@@ -17,7 +17,10 @@
     "build": "tsc",
     "prepare": "husky install"
   },
-  "author": "",
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": "Kibo Software, Inc.",
   "license": "ISC",
   "type": "module",
   "dependencies": {
@@ -45,5 +48,8 @@
     "husky": "^8.0.3",
     "prettier": "^3.0.3",
     "yargs": "^17.7.2"
-  }
+  },
+  "files": [
+    "**/*"
+  ]
 }

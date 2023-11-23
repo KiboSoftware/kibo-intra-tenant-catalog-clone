@@ -93,8 +93,8 @@ export class SyncPageContent {
       targetNavDoc = {} as Document;
       targetNavDoc.name = 'navigation';
       targetNavDoc.listFQN = DOCUMENT_LISTS.SITE_SETTINGS;
-      targetNavDoc.documentTypeFQN = "document@mozu";
-      targetNavDoc.properties= {};
+      targetNavDoc.documentTypeFQN = 'document@mozu';
+      targetNavDoc.properties = {};
       targetNavDoc.properties.data = navigationData;
       await this.createDocument(targetNavDoc);
       return;

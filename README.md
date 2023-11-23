@@ -39,6 +39,7 @@ Ensure you have Node.js 16+ installed.
 - `search-all`: Sync all search-related settings.
 - `products`: Sync products in catalogs.
 - `clean-category-prefixes`: Clean category prefixes.
+- 'sync-content -pages -redirects -catalogContent -themeSettings': Syncs Content Pages , redirects , theme settings
 - `validate-config`: Validate the configuration settings.
 - `init-env`: Creates an empty `.env` file.
 

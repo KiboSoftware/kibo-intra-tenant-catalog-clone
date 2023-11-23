@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import Yargs from 'yargs/yargs';
 import CatalogCloneUtil from '../src/catalog-sync-util.js';
-import syncContent from '../dist/commands/sync.js'
+import syncContent from '../dist/commands/sync.js';
 
 dotenv.config();
 import { bootstrap } from 'global-agent';
@@ -202,32 +202,37 @@ Yargs(process.argv.slice(2))
       );
     },
   })
-  .command('sync-content', 'sync-content', (yargs) => {
-    yargs.options({
-      pages: {
-        type: 'boolean',
-        description: 'Specify pages',
-        requiresArg: false,
-      },
-      redirects: {
-        type: 'boolean',
-        description: 'Specify redirects',
-        requiresArg: false,
-      },
-      catalogContent: {
-        type: 'boolean',
-        description: 'Specify catalog content',
-        requiresArg: false,
-      },
-      themeSettings: {
-        type: 'boolean',
-        description: 'Specify theme settings',
-        requiresArg: false,
-      },
-    });
-  }, (argv) => {
-    syncContent(argv);
-  })
+  .command(
+    'sync-content',
+    'sync-content',
+    (yargs) => {
+      yargs.options({
+        pages: {
+          type: 'boolean',
+          description: 'Specify pages',
+          requiresArg: false,
+        },
+        redirects: {
+          type: 'boolean',
+          description: 'Specify redirects',
+          requiresArg: false,
+        },
+        catalogContent: {
+          type: 'boolean',
+          description: 'Specify catalog content',
+          requiresArg: false,
+        },
+        themeSettings: {
+          type: 'boolean',
+          description: 'Specify theme settings',
+          requiresArg: false,
+        },
+      });
+    },
+    (argv) => {
+      syncContent(argv);
+    },
+  )
   .command({
     command:
       'sync-content2 [pages] [redirects] [catalogContent] [themeSettings]',
@@ -291,6 +296,13 @@ CATALOG_PAIRS='[{"source":5,"destination":7}, {"source":6,"destination":8}]'
 SITE_PAIRS='[{"source":x,"destination":y}, {"source":a,"destination":b}]'
 PRIME_CATALOG=
 MASTER_CATALOG=
+#required for sync-content
+SOURCE_TENANT=
+SOURCE_SITE=
+SOURCE_SITE_PREFIX_LOCALE=en-xx
+TARGET_TENANT=
+TARGET_SITE=
+TARGET_SITE_PREFIX_LOCALE=en-xx
 `;
   if (fs.existsSync('.env')) {
     console.log('.env file already exists');
