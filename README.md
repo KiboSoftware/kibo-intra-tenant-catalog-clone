@@ -25,7 +25,14 @@ Ensure you have Node.js 16+ installed.
    - `SITE_PAIRS`: JSON array of source and destination site pairs.
    - `PRIME_CATALOG`: Prime catalog number.
    - `MASTER_CATALOG`: Master catalog number.
-
+   
+   for CONTENT
+   - `SOURCE_TENANT`: Source Tenant Id, can be the same as the Target Tenant for intra clone
+   - `SOURCE_SITE`: Source Site Id
+   - `SOURCE_SITE_PREFIX_LOCALE`: if the source has a url local prefix such en-kw
+   - `TARGET_SITE`: Target Site Id
+   - `TARGET_SITE_PREFIX_LOCALE`: if the destination  has a url local prefix such en-sk
+   
    You can use the `init-env` command to create an empty `.env` file.
 
 ### Available Commands
@@ -39,7 +46,7 @@ Ensure you have Node.js 16+ installed.
 - `search-all`: Sync all search-related settings.
 - `products`: Sync products in catalogs.
 - `clean-category-prefixes`: Clean category prefixes.
-- 'sync-content -pages -redirects -catalogContent -themeSettings': Syncs Content Pages , redirects , theme settings
+- `sync-content -pages -redirects -catalogContent -themeSettings`: Syncs Content Pages , redirects , theme settings
 - `validate-config`: Validate the configuration settings.
 - `init-env`: Creates an empty `.env` file.
 
