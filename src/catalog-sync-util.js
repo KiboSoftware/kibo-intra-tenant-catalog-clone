@@ -1527,6 +1527,7 @@ class CatalogCloneUtil {
           sourceCategoriesDictionary[missingCategoryCode],
         );
         delete newCategory.id;
+        delete newCategory.auditInfo;
         newCategory.parentCategoryId =
           destinationCategoriesDictionary[newCategory.parentCategoryCode]?.id;
         destinationCategoriesDictionary[newCategory.categoryCode] =
